@@ -1,0 +1,34 @@
+[package]
+name = "kaze_nhanh"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+mock_inference = []
+
+[lib]
+name = "kaze_nhanh"
+path = "src/lib.rs"
+
+[dependencies]
+sudachi = { git = "https://github.com/WorksApplications/Sudachi.rs", tag = "v0.6.9" }
+git2 = { version = "0.18", features = ["vendored-libgit2"] }
+thiserror = "1"
+candle-core = { version = "0.9", default-features = false }
+candle-nn = { version = "0.9", default-features = false }
+candle-transformers = { version = "0.9", default-features = false }
+tokenizers = { version = "0.19", features = ["unstable_wasm"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+saku = "0.1.6"
+pulldown-cmark = { version = "0.13", default-features = false }
+tracing = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "performance"
+harness = false
