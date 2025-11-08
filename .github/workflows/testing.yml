@@ -73,7 +73,8 @@ jobs:
           RUSTFLAGS: "-Z sanitizer=thread"
           RUSTDOCFLAGS: "-Z sanitizer=thread"
         run: |
-          cargo +nightly test summarize_with_details_is_thread_safe git_native_rag_handles_parallel_invocations -- --test-threads=1
+          cargo +nightly test summarize_with_details_is_thread_safe -- --test-threads=1
+          cargo +nightly test git_native_rag_handles_parallel_invocations -- --test-threads=1
 
   performance:
     name: Performance & Soak Benchmarks

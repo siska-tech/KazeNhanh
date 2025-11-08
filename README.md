@@ -102,6 +102,8 @@ Sudachi 辞書はライセンスの都合で同梱していません。利用時
 - `docs/` : 詳細設計や利用ガイド
 
 ## 開発進捗
+- 2025-11-08: ThreadSanitizer ジョブのテストフィルタを修正し、並行性テスト実行を安定化。
+- 2025-11-08: デモ用Gitリポジトリ (`task-demo-001-git-sample-repo`) を整備し、Tauriデモで使用するブランチ・タグ・衝突シナリオを追加。
 - 2025-11-08: CI/CD 統合 (`subtask-testing-001-06-ci`) を完了し、テスト・ThreadSanitizer・性能計測を自動化。
 - 2025-11-07: パフォーマンス/ソーク基盤 (`subtask-testing-001-05-performance`) を整備し、Criterion と soak スクリプトを公開。
 - 2025-11-07: GitNativeRAG パイプライン (`task-pipeline-002-git-native-rag`) を完成させ、差分要約フローを確立。
@@ -243,3 +245,6 @@ Provided under the license terms described in the `LICENSE` file.
 
 ## Acknowledgements
 KazeNhanh benefits from the Rust community and the Sudachi/Candle ecosystems. Thank you to all contributors.
+
+
+

@@ -1,7 +1,7 @@
 # KazeNhanh 開発ロードマップ
 
 取り組むべき次のタスク : （全タスク完了）
-完了タスク件数 / 総タスク件数 : 8 / 8
+完了タスク件数 / 総タスク件数 : 9 / 9
 完了サブタスク件数 / 総サブタスク件数 : 44 / 44 （進捗率: 100%）
 
 | No  | タスクID                             | 概要                                 | ステータス | 優先度 | サブタスク                                            | 依存関係             | 参照ドキュメント                          |
@@ -14,6 +14,10 @@
 | 6   | task-pipeline-001-hybrid-summarizer  | HybridSummarizerとLexRank            | completed  | medium | [一覧](task-pipeline-001-hybrid-summarizer.md) (5/5)  | foundation/inference | KZN-DETAIL-DESIGN-001                     |
 | 7   | task-pipeline-002-git-native-rag     | GitNativeRAGパイプライン             | completed  | high   | [一覧](task-pipeline-002-git-native-rag.md) (6/6)     | foundation/inference | KZN-DETAIL-DESIGN-001, KZN-REQ-SPEC-001   |
 | 8   | task-testing-001-quality-assurance   | 総合テスト体制整備                   | completed  | medium | [一覧](task-testing-001-quality-assurance.md) (6/6)   | パイプライン完了後   | KZN-TEST-SPEC-001                         |
+| 9   | task-demo-001-git-sample-repo        | デモ用Gitリポジトリ整備               | completed  | medium | [一覧](task-demo-001-git-sample-repo.md) (0/0)        | なし                 | README, demo/repo                        |
 
 > 各タスクは設計書の要件を満たす実装および検証を対象とし、進行状況に応じてステータスと日付を更新すること。
+
+
+
 
