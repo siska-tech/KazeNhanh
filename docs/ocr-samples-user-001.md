@@ -17,7 +17,7 @@
 ユーザーが転記を確認済み（2026-10-04）。transcription_status=user_confirmed_2026-10-04。3件のOCR不一致、2件の一致を画像原文に対して記録する。OCR不一致と自然さの異常は同じlabelではない（流暢な誤認識はあり得る）。
 
 ```powershell
-cargo run --release --locked --offline --features qwen --example ocr_samples -- evaluation/ppocrv6-medium-user-001.jsonl target/ppocrv6-medium-user-001-results.json
+cargo run --release --locked --offline --features qwen --example ocr_samples -- evaluation/ppocrv6-medium-user-001.jsonl target/ppocrv6-medium-user-001-results.json --compare-qwen
 ```
 
 runnerはOCR sourceとannotationを保持したcascadeを測り、その後、別のjudgeを使う明示的なオフライン全件比較を測定する。全件比較を本番routingに接続しない。画像原文・期待labelをprimary/model inputへ渡さず、参照情報の漏洩を防ぐ。結果にはcascadeの一次根拠・二次呼出数・OCR不一致のgate通過数・比較model scoreを保存する。未対応semantic軸は評価しない。
@@ -40,3 +40,4 @@ runnerはOCR sourceとannotationを保持したcascadeを測り、その後、�
 暫定閾値0.5でmodelも不一致3件を自然さ異常として検出できなかった。自然さと画像忠実性は別の評価なので、これだけで全OCR誤りを自然さlabelにしないが、この候補をOCR誤認識検出として採用する根拠にはならない。品質未受入を維持する。confidence（0.596〜0.880）を校正済の正解率へ読み替えず、同一画像5件への後付けthreshold最適化をしない。
 
 このデータは、一次通過側を含むmodel/判定方式比較と、後続の用途別label設計に活用する。[集計](../evaluation/ppocrv6-medium-user-001-observations.json)は手元CPUでの観察結果で、他の画像の性能を保証しない。
+追加画像2/3とrunnerのモデル不要の既定動作は[追加サンプル](ocr-samples-user-002-003.md)を参照。過去のQwen実測は保持し、再推論は明示指定する。

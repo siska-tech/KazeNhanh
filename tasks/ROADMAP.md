@@ -39,3 +39,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-04: P3実験用Qwen自然さadapter・固定資産setup・独立token ID照合・CPU smokeを追加。P3全体の品質/意味adapter/SLO受入は未完了。[adapter](../docs/qwen-judge.md)。
 
 2026-10-04: 提供PP-OCRv6 medium実認識5件を保存・投入。画像転記はユーザー確認済み。不一致3件すべてを現gate/実験用Qwenが検出できず、P3品質未受入を維持。[実測](../docs/ocr-samples-user-001.md)。
+
+2026-10-04: 追加OCR 2画像/10件を原文・confidence・document ID付きで保存（計3画像/15件）。「体系キープ」「10kgやせる」の転記はユーザー確認済み、他8件は画像転記未確認。今回の転記差5件（確認済み1件）すべてが一次gateを通過。runner既定はモデル不要、SLM呼出/forward=0、Qwen比較は明示opt-inへ変更。P3品質未受入を維持。[追加データと観察](../docs/ocr-samples-user-002-003.md)。

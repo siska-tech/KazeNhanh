@@ -71,4 +71,4 @@ required-features = ["sudachi", "qwen"]
 
 [[example]]
 name = "ocr_samples"
-required-features = ["sudachi", "qwen"]
+required-features = ["sudachi"]

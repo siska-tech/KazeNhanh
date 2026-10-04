@@ -176,3 +176,7 @@ OCR/ASR自然さ専用Qwen CPU adapterを独立optional crateへ追加。公式�
 PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画像のdocument IDと未確認転記を別保存。cascadeと明示的なoffline全件比較でgate通過側も測る。confidenceを校正済評価scoreに変換しない。[サンプル仕様](../docs/ocr-samples-user-001.md)。
 
 ユーザーが画像転記5件を確認。OCR不一致3・一致2。実投入ではcascade全5 acceptable/二次呼出0、不一致3件のgate見逃し3/3。offline Qwen比較も不一致3件すべて0.999以上で検出できず品質未受入。原文・source annotation/confidenceの保持をrunner内で検証。ライブラリrule/thresholdはこの画像へ後付け適合しない。
+
+2026-10-04: 追加OCR 2画像/10件を原文・confidence・document ID付きで保存（計3画像/15件）。「体系キープ」「10kgやせる」の転記はユーザー確認済み、他8件は画像転記未確認。今回の転記差5件（確認済み1件）すべてが一次gateを通過。runner既定はモデル不要、SLM呼出/forward=0、Qwen比較は明示opt-inへ変更。P3品質未受入を維持。[追加データと観察](../docs/ocr-samples-user-002-003.md)。
+
+検証: 3データセットの既定runner実行、原文/confidence/document ID保持、SLM呼出/forward=0、featureなしQwen比較の拒否、qwen付きexample compile、workspace tests・cargo fmt・git diff --checkが成功。
