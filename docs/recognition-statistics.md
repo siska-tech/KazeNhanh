@@ -45,3 +45,5 @@ verify.ps1へ統合済み。統計生成・hash拒否をCIでも確認する。�
 次は出所・転記規約・splitを固定した実認識対と難しいclean例を整備し、confidence-only/text-only/source-onlyと統合baselineを比較する。語彙/文字列/語列異常ルール、文字種/POS統計、小さなfusionを評価し、reviewと単なる保留の実数を報告する。現在の15件へ重み・閾値を合わせ込まない。R2を完了とせず、R3/R4の選択LM・校正・低リスク受理も後続とする。
 
 辞書比較: small/core/fullを同版で固定し、統計assetを辞書別に再生成して同じ入力で比較する。builder/runnerは末尾に--dictionary pathを指定可能。asset IDに解析identityのdigestを含める。[実行手順と結果](sudachi-dictionary-matrix.md)。
+
+2026-10-05追記: [軽量統計review](recognition-sparse-review.md)を明示opt-inで追加。上記の判定不変は既定動作。OOV/未観測率を確率へ変換せず、三条件のsegment共起のみを実験的review根拠とする。

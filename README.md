@@ -95,3 +95,5 @@ P2 includes explainable primary screening and profiles. Semantic consistency rem
 2026-10-05: [R2オフライン品質集計](docs/recognition-quality.md)を追加。確認済み転記と未確認を分け、review・保留・low_riskの件数と分母を保持。small/core/fullのローカルmatrixに統合。実データでの受入・統合判定は継続。
 
 2026-10-05: [R2評価データのsplit監査](docs/recognition-datasets.md)を追加。document/origin/話者/session・同一転記のsplit跨ぎと未確認testを拒否。公開ASR説明例1対は固定取得し、実測品質データへは昇格させない。
+
+2026-10-05: [R2軽量統計review](docs/recognition-sparse-review.md)を追加。OOVと未観測文字/語bigramの共起をopt-inでreviewへ回し、候補reviewと併用可能。誤り確率・品質受入とは区別する。追加サンプルは必要時にユーザーへ依頼する。

@@ -3,6 +3,10 @@ use kaze_nhanh::source_adapters::*;
 use kaze_nhanh::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    let sparse_review = args.last().is_some_and(|a| a == "--sparse-review");
+    if sparse_review {
+        args.pop();
+    }
     let dictionary_path = if args.len() >= 2 && args[args.len() - 2] == "--dictionary" {
         let path = std::path::PathBuf::from(args.pop().expect("path argument"));
         args.pop();
@@ -11,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
     if args.len() != 2 && args.len() != 5 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--dictionary path]".into());
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--dictionary path] [--sparse-review]".into());
     }
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let assets = SudachiConfig::from_paths(
@@ -36,6 +40,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
+    if sparse_review {
+        if statistics_domain.is_none() {
+            return Err("--sparse-review requires a statistics asset and domain".into());
+        }
+        engine = engine.with_sparse_statistics_review();
+    }
     let data = std::fs::read_to_string(&args[0])?;
     let mut ids = std::collections::HashSet::new();
     let mut reports = Vec::new();
@@ -114,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "undetermined_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Undetermined).count(),
         "review_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Review).count(),
         "low_risk_count":0,"slm_calls":0,"gold_used_for_inference":false,
-        "statistics_enabled":statistics_domain.is_some(),
+        "statistics_enabled":statistics_domain.is_some(),"sparse_review_enabled":sparse_review,
         "score_semantics":"uncalibrated_engine_score_direction_and_aggregation_unknown"});
     let output = serde_json::json!({"schema_version":"kzn.recognition.observation.v1","summary":summary,"reports":reports});
     let path = std::path::PathBuf::from(&args[1]);

@@ -274,3 +274,15 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 [仕様](../docs/recognition-datasets.md)。公開説明例を実測やverifiedへ昇格せず、詳細原ファイルはtarget保存。取得時の自動承認レビューは当初利用上限で失敗したが、ユーザーの上限リセット後の指示で取得成功。移行statusはprogressを維持する。
 
 検証結果: verify.ps1 -Offline成功、split監査4契約＋CLI、取得スクリプトの隔離offline契約、文書リンク/PowerShell構文/format/diff成功。前回75f129cのremote CIも成功。認識runtimeは変更せず、3辞書の品質値を新規実測として再計上しない。
+
+## R2軽量統計review（2026-10-05）
+
+- [x] 明示opt-inの統計三条件review、候補とのOR統合、欠測/不適用時保留
+- [x] 全文scopeと件数/asset由来を保持、risk推定・高confidenceによる取消は行わない
+- [x] 三条件/欠測/primary保持・JSON改ざん・候補＋高confidenceの追加3試験
+- [x] 既存OCR15件を3辞書で比較するローカルrunner
+- [ ] 代表clean corpus/追加特徴/source policy/学習fusionと独立品質受入
+
+[仕様](../docs/recognition-sparse-review.md)。R2はprogress。追加サンプルはユーザーへ依頼し、ASR実行・外部収集を前提にしない。
+
+検証結果: core43件（追加3）とverify.ps1 -Offline成功、正常型番の誤警報を明示する実Sudachi試験も成功。3辞書とも15件中review3/保留12（確認済み不一致のreview1/4、参照未確認review2）。正常型番ZX-900Bにもreviewが出るため実験用を維持し、既定採用/品質受入はしない。

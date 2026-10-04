@@ -339,6 +339,26 @@ fn real_sudachi_statistics_share_artifacts_and_preserve_hard_clean_abstentions()
             }
         }
     }
+    // Explicit counterexample: a legitimate product code can trigger experimental review.
+    // Do not interpret this policy as an accepted correctness classifier.
+    let experimental = RecognitionEngine::new(analyzer(), RecognitionConfig::default())
+        .unwrap()
+        .with_statistics(provider.clone())
+        .with_sparse_statistics_review();
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        for (text, expected) in [
+            ("型番ZX-900B", RecognitionDecision::Review),
+            ("体系キープ", RecognitionDecision::Undetermined),
+        ] {
+            let mut input =
+                RecognitionInput::new(text, source, "synthetic-clean", "counterexample");
+            input.domain = Some("contract_fixture");
+            let report = experimental.evaluate_recognition(input).unwrap();
+            assert_eq!(report.decision, expected);
+            assert_eq!(report.recognition_risk.value, None);
+            assert_eq!(report.metrics.slm_calls, 0);
+        }
+    }
     let changed = RecognitionEngine::new(
         Arc::new(SudachiAnalyzer::new(assets(SudachiMode::A)).unwrap()),
         RecognitionConfig::default(),

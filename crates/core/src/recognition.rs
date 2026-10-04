@@ -48,6 +48,9 @@ wire_enum!(RecognitionFindingKind {
 mod statistics;
 pub use statistics::*;
 
+mod sparse_review;
+pub use sparse_review::{SPARSE_CANDIDATE_REVIEW_POLICY_ID, SPARSE_REVIEW_POLICY_ID};
+
 mod candidate_review;
 pub use candidate_review::CANDIDATE_REVIEW_POLICY_ID;
 
@@ -254,6 +257,7 @@ impl RecognitionReport {
             ));
         }
         candidate_review::validate_candidate_review(self)?;
+        sparse_review::validate(self)?;
         self.recognition_risk.validate()?;
         if self
             .transcription_policy_id
@@ -380,7 +384,9 @@ impl RecognitionReport {
                 self.domain.as_deref(),
                 &row.provider_id,
             )?;
-            if observation.words.unit_count != self.metrics.morpheme_count {
+            if observation.words.unit_count != self.metrics.morpheme_count
+                || observation.oov_count != self.metrics.morphology.oov_count
+            {
                 return Err(EvaluationError::Contract(
                     "statistics morphology count mismatch".into(),
                 ));
@@ -423,6 +429,7 @@ pub struct RecognitionEngine {
     screening: EvaluationEngine,
     statistics: Option<Arc<LightweightStatistics>>,
     candidate_review: bool,
+    sparse_review: bool,
 }
 impl RecognitionEngine {
     pub fn new(
@@ -435,6 +442,7 @@ impl RecognitionEngine {
         Ok(Self {
             statistics: None,
             candidate_review: false,
+            sparse_review: false,
             screening: EvaluationEngine::new(analyzer, evaluation)?
                 .with_primary_detector(Arc::new(PrimaryRules::new(profile)?)),
         })
@@ -444,6 +452,12 @@ impl RecognitionEngine {
     /// This opt-in operational baseline never estimates error probability or low risk.
     pub fn with_candidate_disagreement_review(mut self) -> Self {
         self.candidate_review = true;
+        self
+    }
+    /// Experimental segment-level conjunction of OOV and unseen character/word pairs.
+    /// Requires applicable statistics; missing evidence stays undetermined.
+    pub fn with_sparse_statistics_review(mut self) -> Self {
+        self.sparse_review = true;
         self
     }
     pub fn with_statistics(mut self, statistics: Arc<LightweightStatistics>) -> Self {
@@ -554,7 +568,11 @@ impl RecognitionEngine {
                 RecognitionDecision::Undetermined
             },
             decision_policy: RecognitionDecisionPolicy {
-                id: if self.candidate_review {
+                id: if self.sparse_review && self.candidate_review {
+                    SPARSE_CANDIDATE_REVIEW_POLICY_ID
+                } else if self.sparse_review {
+                    SPARSE_REVIEW_POLICY_ID
+                } else if self.candidate_review {
                     CANDIDATE_REVIEW_POLICY_ID
                 } else {
                     "kzn.recognition.abstain.v1"
@@ -694,6 +712,9 @@ impl RecognitionEngine {
                 id: statistics.artifact_id().into(),
                 sha256: None,
             });
+        }
+        if self.sparse_review {
+            sparse_review::apply(&mut report)?;
         }
         report.validate()?;
         Ok(report)

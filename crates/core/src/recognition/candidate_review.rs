@@ -37,7 +37,10 @@ pub(super) fn candidate_findings(source: Option<&RecognizerEvidence>) -> Vec<Rec
 }
 
 pub(super) fn validate_candidate_review(report: &RecognitionReport) -> Result<(), EvaluationError> {
-    let enabled = report.decision_policy.id == CANDIDATE_REVIEW_POLICY_ID;
+    let enabled = matches!(
+        report.decision_policy.id.as_str(),
+        CANDIDATE_REVIEW_POLICY_ID | SPARSE_CANDIDATE_REVIEW_POLICY_ID
+    );
     let expected = if enabled {
         candidate_findings(report.recognizer_evidence.as_ref())
     } else {

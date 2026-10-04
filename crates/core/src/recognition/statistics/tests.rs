@@ -224,3 +224,173 @@ fn report_rejects_forged_statistics_counts_spans_and_provider() {
         serde_json::json!({"start":4,"end":7});
     assert!(bad.validate().is_err());
 }
+
+fn sparse_engine() -> RecognitionEngine {
+    RecognitionEngine::new(
+        Arc::new(CountingAnalyzer(Arc::new(AtomicUsize::new(0)))),
+        RecognitionConfig::default(),
+    )
+    .unwrap()
+    .with_statistics(Arc::new(LightweightStatistics::new(asset()).unwrap()))
+    .with_sparse_statistics_review()
+}
+#[test]
+fn sparse_review_requires_all_three_observations_and_applicable_asset() {
+    let engine = sparse_engine();
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        for (text, expected) in [
+            ("猫🙂犬", RecognitionDecision::Review),
+            ("猫犬", RecognitionDecision::Undetermined),
+            ("猫🙂", RecognitionDecision::Undetermined),
+            ("🙂", RecognitionDecision::Undetermined),
+            ("", RecognitionDecision::Undetermined),
+        ] {
+            let mut input = RecognitionInput::new(text, source, "doc", "s");
+            input.domain = Some("fixture");
+            let report = engine.evaluate_recognition(input).unwrap();
+            assert_eq!(report.decision, expected, "{text}");
+            assert!(report.recognition_risk.value.is_none());
+            assert_eq!(report.metrics.slm_calls, 0);
+        }
+    }
+    let mut input = RecognitionInput::new("猫🙂犬", RecognitionSource::Asr, "doc", "s");
+    input.domain = Some("unknown");
+    assert_eq!(
+        engine.evaluate_recognition(input).unwrap().decision,
+        RecognitionDecision::Undetermined
+    );
+    let engine = RecognitionEngine::new(
+        Arc::new(CountingAnalyzer(Arc::new(AtomicUsize::new(0)))),
+        RecognitionConfig::default(),
+    )
+    .unwrap()
+    .with_sparse_statistics_review();
+    assert_eq!(
+        engine
+            .evaluate_recognition(RecognitionInput::new(
+                "猫🙂犬",
+                RecognitionSource::Ocr,
+                "d",
+                "s"
+            ))
+            .unwrap()
+            .decision,
+        RecognitionDecision::Undetermined
+    );
+    assert_eq!(
+        engine
+            .evaluate_recognition(RecognitionInput::new(
+                "猫猫猫猫猫猫",
+                RecognitionSource::Ocr,
+                "d",
+                "s"
+            ))
+            .unwrap()
+            .decision,
+        RecognitionDecision::Review
+    );
+}
+#[test]
+fn sparse_report_rejects_forged_findings_reasons_and_policy() {
+    let engine = sparse_engine();
+    let mut input = RecognitionInput::new("猫🙂犬", RecognitionSource::Ocr, "doc", "s");
+    input.domain = Some("fixture");
+    let report = engine.evaluate_recognition(input).unwrap();
+    let roundtrip: RecognitionReport =
+        serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
+    roundtrip.validate().unwrap();
+    let index = report
+        .findings
+        .iter()
+        .position(|f| f.issue.code == "sparse_statistics_conjunction")
+        .unwrap();
+    let mut bad = report.clone();
+    bad.findings.remove(index);
+    assert!(bad.validate().is_err());
+    let mut bad = report.clone();
+    bad.findings[index].issue.evidence["oov_count"] = serde_json::json!(999);
+    assert!(bad.validate().is_err());
+    let mut bad = report.clone();
+    bad.findings[index].issue.span = ByteSpan::new("猫🙂犬", 0, 3).unwrap();
+    assert!(bad.validate().is_err());
+    let mut bad = report.clone();
+    bad.reasons
+        .retain(|r| r != "sparse_statistics_require_review");
+    assert!(bad.validate().is_err());
+    let mut bad = report.clone();
+    bad.decision_policy.id = "kzn.recognition.abstain.v1".into();
+    assert!(bad.validate().is_err());
+    let mut bad = report;
+    bad.decision = RecognitionDecision::Undetermined;
+    assert!(bad.validate().is_err());
+}
+#[test]
+fn combined_candidate_and_statistics_review_preserves_high_confidence_without_override() {
+    let text = "猫🙂犬";
+    let mut candidates = CandidateEvidence {
+        status: RecognitionEvidenceStatus::Observed,
+        hypotheses: vec![text, "猫🙂鳥"]
+            .into_iter()
+            .enumerate()
+            .map(|(i, text)| RecognitionCandidate {
+                rank: i + 1,
+                text: text.into(),
+                scores: vec![],
+                alignment: vec![],
+            })
+            .collect(),
+        truncated: Some(true),
+        origin: Some("synthetic".into()),
+        reason: None,
+    };
+    candidates.align(text).unwrap();
+    let evidence = RecognizerEvidence {
+        schema_version: RECOGNIZER_EVIDENCE_SCHEMA.into(),
+        source: RecognitionSource::Asr,
+        recognizer: RecognizerIdentity {
+            engine: "synthetic".into(),
+            model: None,
+            version: None,
+            decoder: None,
+        },
+        profile: RecognitionSourceProfile::new("synthetic", RecognitionSource::Asr),
+        candidates,
+        anchors: vec![],
+        confidences: vec![ConfidenceObservation {
+            id: "high".into(),
+            span: ByteSpan::whole(text),
+            granularity: ConfidenceGranularity::Segment,
+            status: RecognitionEvidenceStatus::Observed,
+            score: Some(RawScore {
+                value: 0.999,
+                meaning: ConfidenceMeaning::EngineScore,
+                direction: ConfidenceDirection::Unknown,
+                range: None,
+                calibration_id: None,
+                target: None,
+            }),
+            aggregation: None,
+            reason: None,
+            dependencies: vec![],
+        }],
+    };
+    let mut input = RecognitionInput::new(text, RecognitionSource::Asr, "d", "s");
+    input.domain = Some("fixture");
+    input.recognizer_evidence = Some(&evidence);
+    let report = sparse_engine()
+        .with_candidate_disagreement_review()
+        .evaluate_recognition(input)
+        .unwrap();
+    assert_eq!(report.decision_policy.id, SPARSE_CANDIDATE_REVIEW_POLICY_ID);
+    assert_eq!(report.recognizer_evidence.as_ref(), Some(&evidence));
+    assert!(report
+        .findings
+        .iter()
+        .any(|f| f.issue.code == "candidate_disagreement"));
+    assert!(report
+        .findings
+        .iter()
+        .any(|f| f.issue.code == "sparse_statistics_conjunction"));
+    assert_eq!(report.decision, RecognitionDecision::Review);
+    report.validate().unwrap();
+}

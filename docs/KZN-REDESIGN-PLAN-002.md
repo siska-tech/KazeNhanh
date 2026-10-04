@@ -234,3 +234,7 @@ R2先行実装として、明示的opt-inのraw候補不一致review policyを�
 ## 17. 評価データsplit監査（2026-10-05）
 
 宣言されたdocument/origin/speaker/session・非空転記hashのsplit跨ぎ、未確認のtrain/calibration/test混入、入力hash不一致を拒否するオフライン監査器を追加。人工4件で契約のみ検証。公開ASR-ja Evaluation Kitの説明例1対をcommit/hash固定で取得したが、実認識由来を確認できないため独立実ASR集合には数えない。[仕様・出所](recognition-datasets.md)。独立実認識対・追加特徴/fusion・品質受入は未完了で、R2はprogress。
+
+## 18. 軽量統計review（2026-10-05）
+
+OOV＋未観測文字bigram＋未観測語bigramのsegment共起を明示opt-inでreviewへ回す実験policyを追加。候補reviewとORで併用可能、risk=null・低リスク未採用・モデル不要を維持。[仕様](recognition-sparse-review.md)。品質改善や学習fusionの完了とは扱わない。ユーザー方針により、追加サンプルは必要な用途/件数/形式を伝えて依頼し、ASRの実行や外部データ収集を実装の前提にしない。
