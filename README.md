@@ -77,3 +77,5 @@ KazeNhanh 0.2 is a local, detection-first text evaluation foundation. P1 separat
 P2 includes explainable primary screening and profiles. Semantic consistency remains unassessed; unresolved candidates are explicitly held with the secondary judge disabled. Heuristic scores are not calibrated probabilities. P3 now provides an opt-in bounded lazy worker and strict secondary protocol; an experimental Qwen naturalness adapter is available, while Japanese quality/semantic adapter/CPU SLO acceptance remain pending. P4 adds calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).
 
 2026-10-04: 実験用Qwen CPU自然さadapterを独立optional crate/qwen featureへ追加。固定GGUF/tokenizer、独立参照、選択的CPU smokeを実装。P3は品質/意味adapter/CPU SLO未受入のためprogress。[手順と限界](docs/qwen-judge.md)。
+
+実OCRサンプル: ユーザー提供PP-OCRv6 mediumの5件を確認済み画像原文/confidenceと保存。現gate/実験用Qwenの見逃しを含めて記録。[データと実測](docs/ocr-samples-user-001.md)。

@@ -171,3 +171,8 @@ OCR/ASR自然さ専用Qwen CPU adapterを独立optional crateへ追加。公式�
 - [x] 専用セットアップ/verifyスクリプトと独立CPU CI、JSON成果物を追加
 
 品質結果: 異常3例のnaturalnessは反復0.99986/文字化け0.82134/括弧欠落0.99728で、いずれも暫定0.5以上。この候補のOCR/ASR判定品質は未受入。一次warningは消さず、scoreを確率・採用済品質と称さない。14〜17秒/候補はローカルrelease smokeの参考値でSLOではない。P3全体はprogress。意味adapter・実OCR/ASR品質・CPU SLOを残す。[実験用adapter](../docs/qwen-judge.md)。最終版CPU/CI結果はIssue/PRにも記録する。
+## 提供OCRデータの投入（2026-10-04）
+
+PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画像のdocument IDと未確認転記を別保存。cascadeと明示的なoffline全件比較でgate通過側も測る。confidenceを校正済評価scoreに変換しない。[サンプル仕様](../docs/ocr-samples-user-001.md)。
+
+ユーザーが画像転記5件を確認。OCR不一致3・一致2。実投入ではcascade全5 acceptable/二次呼出0、不一致3件のgate見逃し3/3。offline Qwen比較も不一致3件すべて0.999以上で検出できず品質未受入。原文・source annotation/confidenceの保持をrunner内で検証。ライブラリrule/thresholdはこの画像へ後付け適合しない。

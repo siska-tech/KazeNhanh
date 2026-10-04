@@ -68,3 +68,7 @@ required-features = ["mock_inference"]
 [[example]]
 name = "judge_smoke"
 required-features = ["sudachi", "qwen"]
+
+[[example]]
+name = "ocr_samples"
+required-features = ["sudachi", "qwen"]

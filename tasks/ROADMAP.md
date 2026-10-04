@@ -37,3 +37,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-04: P3の選択的二次worker・遅延load・共有予算・deadline・有界queue・厳格出力と保留を実装。優先はOCR/ASR。実モデル日本語judge/tokenizer bundle/CPU SLOは未完了。[制御契約](../docs/secondary-judging.md)。
 
 2026-10-04: P3実験用Qwen自然さadapter・固定資産setup・独立token ID照合・CPU smokeを追加。P3全体の品質/意味adapter/SLO受入は未完了。[adapter](../docs/qwen-judge.md)。
+
+2026-10-04: 提供PP-OCRv6 medium実認識5件を保存・投入。画像転記はユーザー確認済み。不一致3件すべてを現gate/実験用Qwenが検出できず、P3品質未受入を維持。[実測](../docs/ocr-samples-user-001.md)。
