@@ -80,3 +80,5 @@ runnerは認識原文・ID・engine・confidence・位置metadataのみを読み
 reportはtyped evidence追加に合わせ`kzn.recognition.v2`へ更新し、旧v1を同じschemaで解釈しない。RecognizerEvidenceのschemaは`kzn.recognizer.v1`。新v2 consumerでdeserialize後validateを行う。旧v1 JSONは拒否するため再評価が必要。RecognitionInputのstruct literalを使っていた場合はrecognizer_evidence=Noneを追加するかnewを使用する。旧kzn.evaluation.v3は変更しない。
 
 検証はverify.ps1 -Offline（minimal/default/core/optional依存境界・全workspace回帰）とsource evidence契約試験、実Sudachiの15件runner、文書/形式検査で行う。次はR2のlexical/string統計とrisk baseline。
+
+2026-10-05: with_candidate_disagreement_review()で、raw N-best差をreviewへ送るpolicyを明示選択できる。既定の判断とschema v2は維持。候補不一致を認識誤り確定・risk確率にしない。[候補review契約](recognition-candidate-review.md)。

@@ -36,3 +36,5 @@ smallからcore/fullで3件の分割が変わった。core/fullのOCR15件の分
 別の人工hard-clean6例（口語・型番・固有名詞・複合語等）では形態素総数small/core/full=30/29/28、OOV=4/3/3。こちらは形態素snapshotのみで、実ASR測定や認識risk精度ではない。8文の学習corpusとは分離するが、train/calibration/test品質データの代わりにはしない。
 
 現時点で推薦辞書を変更しない。次の実データ比較ではsegment/span検出、誤警報/保留、自然な誤認識、辞書別の統計/fusion、cold/warm latency・RSS・資産容量も比較する。未知語を辞書が認識することと、原資料を忠実に転記したことは別。辞書別に校正・profileを検証する。
+
+候補review比較: matrixは人工candidate-review-contract12例も各辞書で実行し、candidate-review-contract.jsonへ保存する。既定/opt-inの2policyは全辞書で同じ期待運用となることを確認。[仕様と品質上の限界](recognition-candidate-review.md)。

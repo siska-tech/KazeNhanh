@@ -237,3 +237,15 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 ユーザー指定のsmall/core/fullを同版20250129で固定。archive/抽出dic hash、LEGAL保存、edition別配置・offline再利用、setup-dev -AllDictionariesを追加。builder/runnerに辞書path指定、辞書別統計asset ID、形態素snapshotとローカルmatrixを追加。人工hard-clean6例は学習8文と分離。提供OCR15件の形態素61/58/58、OOV3/3/3、全辞書undetermined15、判定変化0。R2品質受入は未完了、今後の実OCR/ASR・fusion/CPU比較にも3辞書を使う。[仕様](../docs/sudachi-dictionary-matrix.md)。詳細レポートはローカル保存。
 
 検証: 3辞書matrixの最終実行、asset IDの3辞書分離、small資産/core入力の不適用、明示欠落path拒否、setupのarchive欠落/破損・抽出hash不一致拒否とLEGAL保存、全examples check、verify.ps1 -Offline、PowerShell構文・文書リンク・format/diffが成功。前回3b7bebbの[remote CI](https://github.com/siska-tech/KazeNhanh/actions/runs/37208894517)も成功。今回のremote CIはpush後に確認する。
+
+## R2候補review baseline（2026-10-05）
+
+- [x] opt-in raw候補不一致policy、候補rank・差分span・未知の正解性を示すfinding
+- [x] 一次warningとのOR判断、欠測/同一候補は保留、risk=null・SLM呼出0、既定policy維持
+- [x] 追加4契約試験: OCR/ASR、高confidence、挿入/削除/空境界、欠測/打切り、上限・改ざん拒否
+- [x] 人工12例のoffline比較runner、3辞書全期待一致（review1→9、うち8件は候補差による追加）
+- [ ] 独立実OCR/ASRの品質比較、転記規約・split、text/source/統合ablation・文字種/POS異常・学習fusion
+
+表記ゆれ・句読点差もreviewになる比較baseline。候補の存在だけで正解を保証せず、提供OCR15件のgoldから候補を作らない。R2はprogress。[仕様と限界](../docs/recognition-candidate-review.md)。
+
+検証結果: verify.ps1 -Offline成功。core40件、source契約13件（追加4）、実Sudachi9件、最小API・依存境界・全workspace/legacy回帰、3辞書のcandidate_baseline全12例、formatと文書リンク/diffを確認。前回0734f90のremote CIは成功。今回のCIはpush後に確認する。

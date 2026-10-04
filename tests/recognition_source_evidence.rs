@@ -356,3 +356,168 @@ fn total_alignment_budget_is_checked_before_aligning_the_set() {
         .collect();
     assert!(adapt_ocr_evidence(&text, payload).is_err());
 }
+
+#[test]
+fn opt_in_candidate_disagreement_reviews_fluent_ocr_asr_without_probability() {
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        let text = "料金は100円です";
+        let mut evidence = match source {
+            RecognitionSource::Ocr => {
+                let mut p = ocr(text);
+                p.candidates = candidates(text, "料金は700円です");
+                adapt_ocr_evidence(text, p).unwrap()
+            }
+            RecognitionSource::Asr => {
+                let mut p = asr(text);
+                p.candidates = candidates(text, "料金は700円です");
+                adapt_asr_evidence(text, p).unwrap()
+            }
+        };
+        // Even high confidence must not erase supplied alternative uncertainty.
+        evidence.confidences[0].score = Some(score(0.999, ConfidenceMeaning::Posterior));
+        let mut input = RecognitionInput::new(text, source, "d", "s");
+        input.recognizer_evidence = Some(&evidence);
+        assert_eq!(
+            engine()
+                .evaluate_recognition(input.clone())
+                .unwrap()
+                .decision,
+            RecognitionDecision::Undetermined
+        );
+        let report = engine()
+            .with_candidate_disagreement_review()
+            .evaluate_recognition(input)
+            .unwrap();
+        assert_eq!(report.decision, RecognitionDecision::Review);
+        assert_eq!(report.decision_policy.id, CANDIDATE_REVIEW_POLICY_ID);
+        assert_eq!(report.recognition_risk.value, None);
+        assert_eq!(
+            report.recognition_risk.status,
+            RecognitionAssessmentStatus::InsufficientEvidence
+        );
+        assert_eq!(report.evidence_adequacy, EvidenceAdequacy::Limited);
+        assert_eq!(report.metrics.slm_calls, 0);
+        let finding = report
+            .findings
+            .iter()
+            .find(|f| f.issue.code == "candidate_disagreement")
+            .unwrap();
+        assert_eq!(finding.issue.span, ByteSpan::new(text, 9, 10).unwrap());
+        assert_eq!(finding.issue.evidence["candidate_rank"], 2);
+        assert_eq!(finding.issue.evidence["scores_used"], false);
+        let decoded: RecognitionReport =
+            serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
+        decoded.validate().unwrap();
+        let mut forged = report.clone();
+        forged.findings.clear();
+        assert!(forged.validate().is_err());
+        let mut forged = report.clone();
+        forged.findings[0].issue.evidence["candidate_rank"] = serde_json::json!(1);
+        assert!(forged.validate().is_err());
+        let mut forged = report.clone();
+        forged.decision_policy.id = "kzn.recognition.abstain.v1".into();
+        assert!(forged.validate().is_err());
+        let mut forged = report;
+        forged.decision = RecognitionDecision::Undetermined;
+        assert!(forged.validate().is_err());
+    }
+}
+
+#[test]
+fn absent_identical_and_truncated_candidates_do_not_establish_low_risk() {
+    for text in ["体系キープ", "", "今日はいい天気です"] {
+        for available in [false, true] {
+            let mut p = ocr(text);
+            p.regions.clear();
+            p.confidences.clear();
+            if available {
+                p.candidates = candidates(text, text);
+            }
+            let evidence = adapt_ocr_evidence(text, p).unwrap();
+            let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, "d", "s");
+            input.recognizer_evidence = Some(&evidence);
+            let report = engine()
+                .with_candidate_disagreement_review()
+                .evaluate_recognition(input)
+                .unwrap();
+            assert_eq!(report.decision, RecognitionDecision::Undetermined);
+            assert_eq!(report.recognition_risk.value, None);
+            assert!(report.findings.is_empty());
+        }
+    }
+}
+
+#[test]
+fn candidate_review_preserves_insertion_boundaries_deletions_and_raw_variants() {
+    for (text, alt, start, end) in [
+        ("猫", "猫🙂", 3, 3),
+        ("猫🙂", "猫", 3, 7),
+        ("", "🙂", 0, 0),
+        ("過す", "過ごす", 3, 3),
+        ("猫", "猫。", 3, 3),
+    ] {
+        let mut p = asr(text);
+        p.regions.clear();
+        p.confidences.clear();
+        p.candidates = candidates(text, alt);
+        let evidence = adapt_asr_evidence(text, p).unwrap();
+        let mut input = RecognitionInput::new(text, RecognitionSource::Asr, "d", "s");
+        input.recognizer_evidence = Some(&evidence);
+        let report = engine()
+            .with_candidate_disagreement_review()
+            .evaluate_recognition(input)
+            .unwrap();
+        assert_eq!(report.decision, RecognitionDecision::Review);
+        assert_eq!(
+            report.findings[0].issue.span,
+            ByteSpan::new(text, start, end).unwrap()
+        );
+        assert_eq!(report.original_text, text);
+        assert_eq!(
+            report.recognizer_evidence.unwrap().candidates.hypotheses[1].text,
+            alt
+        );
+    }
+}
+
+#[test]
+fn candidate_review_is_bounded_and_keeps_independent_primary_findings() {
+    let text = "猫猫猫猫猫猫";
+    let mut p = ocr(text);
+    p.candidates = candidates(text, "犬");
+    p.candidates.hypotheses = (0..MAX_CANDIDATES)
+        .map(|i| RecognitionCandidate {
+            rank: i + 1,
+            text: if i == 0 {
+                text.into()
+            } else {
+                format!("犬{i}")
+            },
+            scores: vec![],
+            alignment: vec![],
+        })
+        .collect();
+    let evidence = adapt_ocr_evidence(text, p).unwrap();
+    let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, "d", "s");
+    input.recognizer_evidence = Some(&evidence);
+    let report = engine()
+        .with_candidate_disagreement_review()
+        .evaluate_recognition(input)
+        .unwrap();
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .filter(|f| f.issue.code == "candidate_disagreement")
+            .count(),
+        MAX_CANDIDATES - 1
+    );
+    assert!(report
+        .findings
+        .iter()
+        .any(|f| f.issue.code != "candidate_disagreement"));
+    assert!(report
+        .reasons
+        .contains(&"primary_findings_require_review".into()));
+    assert_eq!(report.metrics.slm_calls, 0);
+}

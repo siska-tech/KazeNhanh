@@ -18,6 +18,8 @@ try {
         $dictionary = if ($edition -eq 'small') { 'resources/sudachi/system.dic' } else { "target/sudachi-dictionaries/$edition/system.dic" }
         $directory = Join-Path $outputRoot $edition
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
+        Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'candidate_baseline') + $networkArgs + @('--',
+            $dictionary, 'evaluation/candidate-review-contract.jsonl', (Join-Path $directory 'candidate-review-contract.json')))
         $asset = Join-Path $directory 'statistics.json'
         Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'statistics_asset') + $networkArgs + @('--',
             'tests/fixtures/statistics/clean-contract.jsonl', 'authored-contract-v1', 'contract_fixture', 'CC0-1.0', $asset, '--dictionary', $dictionary))

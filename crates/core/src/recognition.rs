@@ -48,6 +48,9 @@ wire_enum!(RecognitionFindingKind {
 mod statistics;
 pub use statistics::*;
 
+mod candidate_review;
+pub use candidate_review::CANDIDATE_REVIEW_POLICY_ID;
+
 mod source_evidence;
 pub use source_evidence::*;
 
@@ -250,6 +253,7 @@ impl RecognitionReport {
                 "observed recognizer evidence needs typed source data".into(),
             ));
         }
+        candidate_review::validate_candidate_review(self)?;
         self.recognition_risk.validate()?;
         if self
             .transcription_policy_id
@@ -418,6 +422,7 @@ impl Default for RecognitionConfig {
 pub struct RecognitionEngine {
     screening: EvaluationEngine,
     statistics: Option<Arc<LightweightStatistics>>,
+    candidate_review: bool,
 }
 impl RecognitionEngine {
     pub fn new(
@@ -429,11 +434,18 @@ impl RecognitionEngine {
         evaluation.max_input_bytes = config.max_input_bytes;
         Ok(Self {
             statistics: None,
+            candidate_review: false,
             screening: EvaluationEngine::new(analyzer, evaluation)?
                 .with_primary_detector(Arc::new(PrimaryRules::new(profile)?)),
         })
     }
 
+    /// Review any raw N-best disagreement, including spelling/punctuation variants.
+    /// This opt-in operational baseline never estimates error probability or low risk.
+    pub fn with_candidate_disagreement_review(mut self) -> Self {
+        self.candidate_review = true;
+        self
+    }
     pub fn with_statistics(mut self, statistics: Arc<LightweightStatistics>) -> Self {
         self.statistics = Some(statistics);
         self
@@ -480,7 +492,7 @@ impl RecognitionEngine {
             value: None,
             reason: reason.into(),
         };
-        let findings: Vec<_> = screening
+        let mut findings: Vec<_> = screening
             .issues
             .into_iter()
             .map(|issue| RecognitionFinding {
@@ -492,6 +504,17 @@ impl RecognitionEngine {
                 issue,
             })
             .collect();
+        let primary_finding_count = findings.len();
+        let primary_review = findings
+            .iter()
+            .any(|f| matches!(f.issue.severity, Severity::Warning | Severity::Error));
+        let candidate_findings = if self.candidate_review {
+            candidate_review::candidate_findings(input.recognizer_evidence)
+        } else {
+            vec![]
+        };
+        let candidate_review_needed = !candidate_findings.is_empty();
+        findings.extend(candidate_findings);
         let review = findings
             .iter()
             .any(|f| matches!(f.issue.severity, Severity::Warning | Severity::Error));
@@ -499,8 +522,11 @@ impl RecognitionEngine {
             "recognition_risk_estimator_not_configured".into(),
             "evidence_does_not_establish_low_risk".into(),
         ];
-        if review {
+        if primary_review {
             reasons.push("primary_findings_require_review".into());
+        }
+        if candidate_review_needed {
+            reasons.push(candidate_review::candidate_reason().into());
         }
         let mut report = RecognitionReport {
             schema_version: RECOGNITION_SCHEMA_VERSION.into(),
@@ -528,7 +554,12 @@ impl RecognitionEngine {
                 RecognitionDecision::Undetermined
             },
             decision_policy: RecognitionDecisionPolicy {
-                id: "kzn.recognition.abstain.v1".into(),
+                id: if self.candidate_review {
+                    CANDIDATE_REVIEW_POLICY_ID
+                } else {
+                    "kzn.recognition.abstain.v1"
+                }
+                .into(),
                 low_risk_threshold: None,
                 calibration_id: None,
             },
@@ -544,7 +575,7 @@ impl RecognitionEngine {
                 observed(
                     RecognitionEvidenceKind::TextRules,
                     PRIMARY_RULES_ID,
-                    serde_json::json!({"finding_count":findings.len()}),
+                    serde_json::json!({"finding_count":primary_finding_count}),
                     "limited_text_rules_only",
                 ),
                 unavailable(

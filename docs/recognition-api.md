@@ -59,3 +59,5 @@ typed source evidenceを渡した場合はrecognizer familyをobservedとして�
 - CLIのOCR無警告とASR異常例を実行し、risk=null/SLM呼出0を確認。
 
 OCR15件の全件保留は検出性能の改善を意味しない。実ASR品質は未評価。未校正model/risk score、低リスク受理率、CPU SLOの受入はR2以降に残る。
+
+2026-10-05: with_candidate_disagreement_review()で、raw N-best差をreviewへ送るpolicyを明示選択できる。既定の判断とschema v2は維持。候補不一致を認識誤り確定・risk確率にしない。[候補review契約](recognition-candidate-review.md)。

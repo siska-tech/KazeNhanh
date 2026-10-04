@@ -88,3 +88,7 @@ required-features = ["sudachi"]
 [[example]]
 name = "dictionary_snapshot"
 required-features = ["sudachi"]
+
+[[example]]
+name = "candidate_baseline"
+required-features = ["sudachi"]
