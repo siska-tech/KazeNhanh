@@ -231,3 +231,9 @@ PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画�
 
 R2はprogress。人工clean assetは適用性能を保証しない。統計観察レポートのCIアップロード追加は自動承認レビューが拒否したため取り下げ、ユーザー由来の詳細はローカル保存にした。CIは統計生成とhash拒否を確認する。[統計契約](../docs/recognition-statistics.md)。移行全体のstatus/end_dateは未変更。
 検証結果: verify.ps1 -Offline成功（core/default/minimal/qwen依存境界、core40件、source契約9件、実Sudachi9件、全workspace/legacy回帰）。統計6件の最終再実行も成功。R1 commit 2618e17の[remote CI](https://github.com/siska-tech/KazeNhanh/actions/runs/37204064451)は成功。R2のremote CIはpush後に確認する。
+
+## R2辞書edition比較（2026-10-04）
+
+ユーザー指定のsmall/core/fullを同版20250129で固定。archive/抽出dic hash、LEGAL保存、edition別配置・offline再利用、setup-dev -AllDictionariesを追加。builder/runnerに辞書path指定、辞書別統計asset ID、形態素snapshotとローカルmatrixを追加。人工hard-clean6例は学習8文と分離。提供OCR15件の形態素61/58/58、OOV3/3/3、全辞書undetermined15、判定変化0。R2品質受入は未完了、今後の実OCR/ASR・fusion/CPU比較にも3辞書を使う。[仕様](../docs/sudachi-dictionary-matrix.md)。詳細レポートはローカル保存。
+
+検証: 3辞書matrixの最終実行、asset IDの3辞書分離、small資産/core入力の不適用、明示欠落path拒否、setupのarchive欠落/破損・抽出hash不一致拒否とLEGAL保存、全examples check、verify.ps1 -Offline、PowerShell構文・文書リンク・format/diffが成功。前回3b7bebbの[remote CI](https://github.com/siska-tech/KazeNhanh/actions/runs/37208894517)も成功。今回のremote CIはpush後に確認する。

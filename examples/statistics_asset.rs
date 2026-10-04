@@ -10,10 +10,17 @@ struct CleanSegment {
     text: String,
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<_> = std::env::args().skip(1).collect();
+    let mut args: Vec<_> = std::env::args().skip(1).collect();
+    let dictionary_path = if args.len() >= 2 && args[args.len() - 2] == "--dictionary" {
+        let path = std::path::PathBuf::from(args.pop().expect("path argument"));
+        args.pop();
+        Some(path)
+    } else {
+        None
+    };
     if args.len() != 5 {
         return Err(
-            "Usage: statistics_asset clean.jsonl corpus-id domain license output.json".into(),
+            "Usage: statistics_asset clean.jsonl corpus-id domain license output.json [--dictionary path]".into(),
         );
     }
     if std::fs::metadata(&args[0])?.len() > 8 * 1024 * 1024 {
@@ -23,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data = std::str::from_utf8(&bytes)?;
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let analyzer = SudachiAnalyzer::new(SudachiConfig::from_paths(
-        root.join("resources/sudachi/system.dic"),
+        dictionary_path.unwrap_or_else(|| root.join("resources/sudachi/system.dic")),
         root.join("resources/sudachi/sudachi.json"),
         SudachiMode::C,
     )?)?;
@@ -52,9 +59,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .1
         .provenance
         .clone();
+    let analyzer_key = format!("{:x}", Sha256::digest(serde_json::to_vec(&identities)?));
     let artifact = StatisticsArtifact::fit(
         StatisticsMetadata {
-            id: format!("{}.{}.statistics.v1", args[1], args[2]),
+            id: format!(
+                "{}.{}.statistics.v1.{}",
+                args[1],
+                args[2],
+                &analyzer_key[..16]
+            ),
             domain: args[2].clone(),
             corpus_id: args[1].clone(),
             corpus_sha256: format!("{:x}", Sha256::digest(&bytes)),

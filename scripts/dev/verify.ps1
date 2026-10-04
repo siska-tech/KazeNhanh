@@ -32,6 +32,7 @@ try {
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_source_evidence') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_nlp') + $networkArgs)
+    & (Join-Path $PSScriptRoot 'test-sudachi-setup.ps1')
     & (Join-Path $PSScriptRoot 'verify-statistics.ps1') -Offline:$Offline
     # Production legacy runtime stays real; only fixtures use explicit mocks.
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)

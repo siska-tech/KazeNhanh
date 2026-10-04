@@ -26,6 +26,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup-dev.ps1 -V
 
 `-ExecutionPolicy Bypass`はこのプロセスだけに適用する。組織ポリシーが実行を制限するPCではそのポリシーに従う。PowerShell 7の場合は`pwsh -NoProfile -File scripts/dev/setup-dev.ps1 -Verify`でも実行できる。
 
+- `-AllDictionaries`: 固定版small/core/fullを揃える。通常はsmallのみ。比較手順は[辞書matrix](sudachi-dictionary-matrix.md)。
 - `-CheckOnly`: Cargo/Git/MSVCの存在確認。downloadしない。
 - `-Offline`: 取得済みCargo依存と辞書archiveだけを使う。初回には利用不可。
 - `-Verify`: 準備後にformat、本番build、実辞書smoke、テスト登録確認、モック推論のテストを実行。
@@ -41,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify.ps1 -Offl
 
 RustのSudachi v0.6.9はCargo.lockで固定する。辞書は公式配布の[SudachiDict-small 20250129](https://pypi.org/project/SudachiDict-small/20250129/)を使用する。これは再現用fixtureであり、最新辞書や全用途向けの最適辞書という意味ではない。
 
-`resources/sudachi/dictionary.lock.json`にURL・version・archiveのSHA256を記録。公式wheelをZIPとして読み、system.dicとライセンスだけを取り出す。PythonやSudachiPyのインストール、パッケージコードの実行は不要。
+`resources/sudachi/dictionary.lock.json`にURL・version・archiveと抽出辞書のSHA256を記録。公式wheelをZIPとして読み、system.dicとライセンスだけを取り出す。PythonやSudachiPyのインストール、パッケージコードの実行は不要。
 
 - archive cache: `target/dev-assets/`
 - 辞書: `resources/sudachi/system.dic`（Git管理外）
@@ -52,7 +53,9 @@ RustのSudachi v0.6.9はCargo.lockで固定する。辞書は公式配布の[Sud
 
 設定はSudachiに内蔵された文字定義・OOV/rewrite資源を使用し、作業ディレクトリのchar.def等に依存しない最小開発profile。製品用domain profileではない。設定変更も精度へ影響するのでGitで追跡する。
 
-初回はcrates.io、GitHub、files.pythonhosted.orgへ依存・辞書取得の通信が必要。準備後の`verify.ps1 -Offline`およびNLP実行ではdownloadしない。GGUFモデルは取得しない。
+全辞書比較ではcore/fullも20250129を固定し、target配下へ分離する。fullは公式配布ZIPからLEGALを含め保存。[取得と比較](sudachi-dictionary-matrix.md)。
+
+初回はcrates.io、GitHub、files.pythonhosted.org（fullは公式CloudFront配布先）へ依存・辞書取得の通信が必要。準備後の`verify.ps1 -Offline`およびNLP実行ではdownloadしない。GGUFモデルは取得しない。
 
 ## テストの区別
 

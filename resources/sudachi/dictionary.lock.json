@@ -1,8 +1,9 @@
 {
-  "package": "SudachiDict-small",
-  "version": "20250129",
-  "url": "https://files.pythonhosted.org/packages/b0/9b/20ff5d3e2d16e5b0f98eaa3ccdbc149313f3f7ccb99a4b09edc204e7d9b1/SudachiDict_small-20250129-py3-none-any.whl",
-  "sha256": "5f27f7b19fb2cd0cde17abf680cb56fba5f870163906101150e60b97d272cc23",
-  "dictionary_entry": "sudachidict_small/resources/system.dic",
-  "source": "https://pypi.org/project/SudachiDict-small/20250129/"
+    "package":  "SudachiDict-small",
+    "version":  "20250129",
+    "url":  "https://files.pythonhosted.org/packages/b0/9b/20ff5d3e2d16e5b0f98eaa3ccdbc149313f3f7ccb99a4b09edc204e7d9b1/SudachiDict_small-20250129-py3-none-any.whl",
+    "sha256":  "5f27f7b19fb2cd0cde17abf680cb56fba5f870163906101150e60b97d272cc23",
+    "dictionary_entry":  "sudachidict_small/resources/system.dic",
+    "source":  "https://pypi.org/project/SudachiDict-small/20250129/",
+    "dictionary_sha256":  "edd7e6521ccc2c2e674dd5f4cccb9e87456cf12507b8f8448973f4602b545317"
 }

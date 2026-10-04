@@ -87,3 +87,5 @@ P2 includes explainable primary screening and profiles. Semantic consistency rem
 2026-10-04: 実験用Qwen CPU自然さadapterを独立optional crate/qwen featureへ追加。固定GGUF/tokenizer、独立参照、選択的CPU smokeを実装。P3は品質/意味adapter/CPU SLO未受入のためprogress。[手順と限界](docs/qwen-judge.md)。
 
 実OCRサンプル: PP-OCRv6 mediumの3画像/15件を原文・confidence付きで保存。最初の5件と追加2箇所は転記確認済み、残り8件は未確認。runner既定はモデル不要（SLM呼出0）、Qwen比較は明示opt-in。現gateの検出漏れと実験用Qwenの未受入品質を記録。[初回実測](docs/ocr-samples-user-001.md) / [追加データと観察](docs/ocr-samples-user-002-003.md)。
+
+2026-10-04: [small/core/full辞書比較](docs/sudachi-dictionary-matrix.md)を追加。同版・Mode CでOCR15件と人工hard-cleanを観察し、統計assetを辞書別に生成。分割差はあるがOCR判定は全件保留のまま。実OCR/ASR・fusion/CPU品質の受入は継続。

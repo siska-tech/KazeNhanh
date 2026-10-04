@@ -84,3 +84,7 @@ required-features = ["sudachi"]
 [[example]]
 name = "statistics_asset"
 required-features = ["sudachi"]
+
+[[example]]
+name = "dictionary_snapshot"
+required-features = ["sudachi"]

@@ -2,13 +2,20 @@
 use kaze_nhanh::source_adapters::*;
 use kaze_nhanh::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    let mut args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    let dictionary_path = if args.len() >= 2 && args[args.len() - 2] == "--dictionary" {
+        let path = std::path::PathBuf::from(args.pop().expect("path argument"));
+        args.pop();
+        Some(path)
+    } else {
+        None
+    };
     if args.len() != 2 && args.len() != 5 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain]".into());
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--dictionary path]".into());
     }
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let assets = SudachiConfig::from_paths(
-        root.join("resources/sudachi/system.dic"),
+        dictionary_path.unwrap_or_else(|| root.join("resources/sudachi/system.dic")),
         root.join("resources/sudachi/sudachi.json"),
         SudachiMode::C,
     )?;

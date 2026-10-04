@@ -1,0 +1,11 @@
+{
+    "package":  "SudachiDict-full",
+    "version":  "20250129",
+    "url":  "https://d2ej7fkh96fzlu.cloudfront.net/sudachidict/sudachi-dictionary-20250129-full.zip",
+    "archive_name":  "sudachi-dictionary-20250129-full.zip",
+    "sha256":  "cad0d67fe25a4754dae270198fd81f50c664e56f251762cb93dda7e835c0feb0",
+    "dictionary_entry":  "sudachi-dictionary-20250129/system_full.dic",
+    "source":  "https://pypi.org/project/SudachiDict-full/20250129/",
+    "distribution_metadata_sha256":  "9f87d67478c61a94fd05c5a8e98d9a7b6b6cb517f2e64f34452a46788a1b0ed5",
+    "dictionary_sha256":  "d7c4a22bbf24c7d0ff4e68b921c3e86cdc63df7f8f20c25191155dccc34756f4"
+}

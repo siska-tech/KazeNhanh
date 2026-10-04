@@ -216,3 +216,7 @@ typed confidence/候補/profile、依存ID、欠測/unknown、bounded Unicode al
 文字bigram・全形態素の語unigram/bigramをローカル疎頻度表から抽出し、未観測率と原文span・欠測理由をLexicalStatisticsへ返す。一次と統計は1回の形態素解析を共有。domain/辞書/settings/mode不一致では不適用とし、頻度/OOVを誤り確率・review・低リスクへ変換しない。版付き資産、clean corpus builder、SHA256照合runner、再現生成と改ざん/境界検証を追加。core依存境界・SLM呼出0は維持。
 
 8文の人工clean契約fixtureは代表資産ではない。ユーザー15件を学習へ使わず、ローカル統計観察では全件undetermined / risk=null。統計レポートの外部アップロード追加は自動承認レビューが拒否し、取り下げた。CIは人工契約の資産生成とhash拒否のみ確認し、ユーザー由来の観察レポートはローカル保存。R2はprogress。文字種/POS等の異常特徴、rule/fusion、独立実OCR/ASR集合と難しいclean例による品質比較が残る。[実装・手順・限界](recognition-statistics.md)。
+
+## 14. 辞書edition比較（2026-10-04）
+
+ユーザー指定によりSudachi small/core/fullで評価する。現baselineと同じ20250129・Mode C・settings・入力を固定し、統計assetを各辞書で再生成。提供OCR15件の形態素数61/58/58、OOV3/3/3、全辞書でreview0/undetermined15/low_risk0。分割差3件、判定変化なし。人工hard-clean6例も別に観察。今後の独立実OCR/ASRとfusion・CPU評価でも3辞書を比較し、OOV低減だけで正常/低リスクへ昇格しない。[手順と限界](sudachi-dictionary-matrix.md)。

@@ -43,3 +43,5 @@ verify.ps1へ統合済み。統計生成・hash拒否をCIでも確認する。�
 2026-10-04ローカル観察: 提供OCR15件の統計を抽出。review=0、undetermined=15、low_risk=0、risk推定=0、SLM呼出=0。人工8文からの未観測率は誤り検出品質の指標ではない。独立した実OCR/ASRでのprecision/recallやCPU SLOは未評価。
 
 次は出所・転記規約・splitを固定した実認識対と難しいclean例を整備し、confidence-only/text-only/source-onlyと統合baselineを比較する。語彙/文字列/語列異常ルール、文字種/POS統計、小さなfusionを評価し、reviewと単なる保留の実数を報告する。現在の15件へ重み・閾値を合わせ込まない。R2を完了とせず、R3/R4の選択LM・校正・低リスク受理も後続とする。
+
+辞書比較: small/core/fullを同版で固定し、統計assetを辞書別に再生成して同じ入力で比較する。builder/runnerは末尾に--dictionary pathを指定可能。asset IDに解析identityのdigestを含める。[実行手順と結果](sudachi-dictionary-matrix.md)。

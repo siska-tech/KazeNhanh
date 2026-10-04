@@ -1,6 +1,6 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 [CmdletBinding()]
-param([switch]$Offline, [switch]$CheckOnly, [switch]$Verify)
+param([switch]$Offline, [switch]$CheckOnly, [switch]$Verify, [switch]$AllDictionaries)
 . (Join-Path $PSScriptRoot 'common.ps1')
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $repoRoot
@@ -26,6 +26,9 @@ try {
     if ($Offline) { $fetchArgs += '--offline' }
     Invoke-KazeCargo -CargoArguments $fetchArgs
     & (Join-Path $PSScriptRoot 'setup-sudachi.ps1') -Offline:$Offline
+    if ($AllDictionaries) {
+        foreach ($edition in @('core', 'full')) { & (Join-Path $PSScriptRoot 'setup-sudachi.ps1') -Edition $edition -Offline:$Offline }
+    }
     if ($Verify) { & (Join-Path $PSScriptRoot 'verify.ps1') -Offline:$Offline }
     else { Write-Host 'Next: ./scripts/dev/verify.ps1 (run with powershell or pwsh).' }
 } finally { Pop-Location }
