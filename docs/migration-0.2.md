@@ -1,5 +1,7 @@
 # 0.1 → 0.2移行ガイド
 
+> 2026-10-04追記: 以下の手順は現行API用。今後は[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)に従いOCR/ASR向けAPIを明示追加する。現acceptableは認識正解を保証しない。R0の追加APIと利用例は[recognition API](recognition-api.md)を参照。旧acceptableを新low_riskへ変換しない。
+
 2026-10-04、P1でcrateを分離した。0.2は開発版。P2でPrimaryRulesとDomainProfileを標準経路へ追加した。[一次検出の範囲](primary-detection.md)を参照。
 
 ## 新しい評価API

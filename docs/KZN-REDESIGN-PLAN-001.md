@@ -1,5 +1,7 @@
 # KazeNhanh 再設計監査・移行計画
 
+> 2026-10-04追記: 今後の目的と移行順は[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)を優先する。本書は初回監査と従来計画の履歴。自然さ三軸中心の契約・P3以降の採用方針は再設計対象。
+
 - 文書ID: KZN-REDESIGN-PLAN-001
 - 作成日: 2026-10-04 (Asia/Tokyo)
 - 監査対象: commit `ddea985`、Rust crate `kaze_nhanh` 0.1.0
@@ -101,7 +103,6 @@ EvaluationReportは次を返す:
 | coverage | 評価した軸・範囲、未評価span、文脈不足、長文分割による制限 |
 | provenance | 辞書/設定/rules/model/tokenizer/prompt/adapter/calibratorの識別子とhash、schema/feature version |
 | metrics | stage別時間、token数、SLM呼出数、必要ならqueue待機。原文ログは既定off |
-```
 
 - validityは宣言された入力制約とテキストとしての成立性、naturalnessは指定言語・文体での自然さ、semantic_consistencyは指定scopeでの矛盾/整合性とする。外部世界の事実性を一括で保証する名前にしない。
 - semantic scopeはinternal（文内・文間）とreference（与えた文脈との整合）を区別する。参照なしではreferenceはnot_applicableまたはinsufficient_context。自然でも参照と矛盾する文を低risk扱いしない。

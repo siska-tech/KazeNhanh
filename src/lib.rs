@@ -39,3 +39,15 @@ pub fn japanese_engine_with_profile(
 
 #[cfg(feature = "qwen")]
 pub use kaze_nhanh_qwen::{QwenJudgeConfig, QwenNaturalnessFactory};
+
+/// Model-free recognition screening. Missing evidence produces undetermined, never low risk.
+#[cfg(feature = "sudachi")]
+pub fn japanese_recognition_engine(
+    config: SudachiConfig,
+    recognition: RecognitionConfig,
+) -> Result<RecognitionEngine, EvaluationError> {
+    RecognitionEngine::new(
+        std::sync::Arc::new(SudachiAnalyzer::new(config)?),
+        recognition,
+    )
+}

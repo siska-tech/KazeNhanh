@@ -134,6 +134,9 @@ macro_rules! wire_enum {
         pub enum $name { $($variant),* }
     }
 }
+mod recognition;
+pub use recognition::*;
+
 wire_enum!(Verdict {
     Acceptable,
     Suspicious,

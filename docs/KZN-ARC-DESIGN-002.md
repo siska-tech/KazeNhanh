@@ -1,5 +1,7 @@
 # KZN-ARC-DESIGN-002: 評価責務の分離
 
+> 2026-10-04追記: 以下は現0.2の構成。[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)では依存分離・Sudachi・worker制御を再利用し、source adapter / typed evidence / risk estimator / decisionを追加・再編する。R0の独立RecognitionEngineは追加済み。[現APIと境界](recognition-api.md)。adapter/estimatorは未実装。
+
 2026-10-04 / P1実装。ユーザーの明示承認を受け、core/Sudachi/legacyをCargo workspaceへ分離。公開facadeは0.2開発版。
 
 ## 依存方向

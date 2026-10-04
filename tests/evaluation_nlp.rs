@@ -213,3 +213,64 @@ fn real_sudachi_routes_asr_auxiliary_repetition_to_explicit_fake_only() {
     assert!(report.metrics.morphology.auxiliary_count >= 3);
     report.validate().unwrap();
 }
+
+#[test]
+fn recognition_r0_preserves_fifteen_ocr_samples_and_abstains_without_risk_evidence() {
+    use kaze_nhanh::*;
+    let engine = RecognitionEngine::new(analyzer(), RecognitionConfig::default()).unwrap();
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut count = 0;
+    for suffix in ["001", "002", "003"] {
+        let data = std::fs::read_to_string(
+            root.join(format!("evaluation/ppocrv6-medium-user-{suffix}.jsonl")),
+        )
+        .unwrap();
+        for line in data.lines().filter(|line| !line.trim().is_empty()) {
+            let sample: serde_json::Value = serde_json::from_str(line).unwrap();
+            let text = sample["text"].as_str().unwrap();
+            let doc = format!("user-image-{suffix}");
+            let annotations = [SourceAnnotation {
+                span: ByteSpan::whole(text),
+                data: serde_json::json!({"ocr_confidence":sample["confidence"],"ocr_engine":sample["engine"]}),
+            }];
+            let mut input = RecognitionInput::new(
+                text,
+                RecognitionSource::Ocr,
+                &doc,
+                sample["id"].as_str().unwrap(),
+            );
+            input.annotations = &annotations;
+            let result = engine.evaluate_recognition(input).unwrap();
+            assert_eq!(result.original_text, text);
+            assert_eq!(result.annotations, annotations);
+            assert_eq!(result.decision, RecognitionDecision::Undetermined);
+            assert_eq!(result.recognition_risk.value, None);
+            assert_eq!(result.metrics.slm_calls, 0);
+            assert!(result
+                .provenance
+                .iter()
+                .any(|a| a.component == "dictionary"));
+            result.validate().unwrap();
+            count += 1;
+        }
+    }
+    assert_eq!(count, 15);
+    let asr = engine
+        .evaluate_recognition(RecognitionInput::new(
+            "今日は晴れです",
+            RecognitionSource::Asr,
+            "utterance",
+            "1",
+        ))
+        .unwrap();
+    assert_eq!(asr.decision, RecognitionDecision::Undetermined);
+    let anomaly = engine
+        .evaluate_recognition(RecognitionInput::new(
+            "猫猫猫猫猫猫",
+            RecognitionSource::Asr,
+            "utterance",
+            "2",
+        ))
+        .unwrap();
+    assert_eq!(anomaly.decision, RecognitionDecision::Review);
+}

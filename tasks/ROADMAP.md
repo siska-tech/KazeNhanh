@@ -1,6 +1,8 @@
 # KazeNhanh 開発ロードマップ
 
-取り組むべき次のタスク : 再設計計画 P3（選択的SLM）→ P4（校正・品質受入）
+取り組むべき次のタスク : recognition risk再設計 R1（OCR/ASR evidence）→ R2（軽量risk baseline）
+
+2026-10-04: [再設計案002](../docs/KZN-REDESIGN-PLAN-002.md)を作成。OCR/ASR共通recognition riskを主目的に変更し、naturalnessは補助、Qwen judgeは実験比較用とする。R0契約/保留は実装済み、R1〜R4は未着手。誤認識検出品質の改善を意味しない。以下のP0〜P3は従来計画での実績・履歴として保持。
 
 2026-10-04: [再設計監査・計画](../docs/KZN-REDESIGN-PLAN-001.md)を作成。[監査タスク](task-redesign-001-text-evaluation-audit.md)はcompleted、[移行タスク](task-redesign-002-text-evaluation-migration.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0完了。P1/P2も完了。P3は制御契約を実装して進行中、P4/P5は未着手。以下の9件・44件は旧Git/要約機能の履歴であり、新基盤の進捗や検証済み品質を示しません。
 
@@ -41,3 +43,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-04: 提供PP-OCRv6 medium実認識5件を保存・投入。画像転記はユーザー確認済み。不一致3件すべてを現gate/実験用Qwenが検出できず、P3品質未受入を維持。[実測](../docs/ocr-samples-user-001.md)。
 
 2026-10-04: 追加OCR 2画像/10件を原文・confidence・document ID付きで保存（計3画像/15件）。「体系キープ」「10kgやせる」の転記はユーザー確認済み、他8件は画像転記未確認。今回の転記差5件（確認済み1件）すべてが一次gateを通過。runner既定はモデル不要、SLM呼出/forward=0、Qwen比較は明示opt-inへ変更。P3品質未受入を維持。[追加データと観察](../docs/ocr-samples-user-002-003.md)。
+
+2026-10-04: [R0 API](../docs/recognition-api.md)を追加。別schema・risk/null・evidence欠測・review/undetermined、モデル不要facade/CLI、提供OCR15件の保持/保留を検証。低リスク受理とrisk estimatorは未実装。

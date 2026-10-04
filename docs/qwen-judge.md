@@ -1,5 +1,7 @@
 # 実験用Qwen CPU自然さadapter
 
+> 2026-10-04方針変更: [recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)では、本judgeを主経路の採用対象から外し、実験比較用に保持する。以下は既存opt-in adapterの実装・検証手順。risk判定や本文LM surprisalの実装ではない。
+
 2026-10-04 / P3進行中。OCR/ASRの自然さ専用。Qwen2.5-0.5B-Instruct Q4_K_Mをoptional `kaze_nhanh_qwen` crateへ実装し、rootでは`qwen` featureで明示有効化する。core/default/minimalにはCandle/tokenizerを追加しない。Qwen crateはGit/Markdown/legacy/Sudachiへ依存しない。
 
 ## セットアップと利用

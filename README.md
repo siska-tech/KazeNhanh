@@ -2,11 +2,13 @@
 
 ![KazeNhanh Mascot](docs/img/KazeNhanh.png)
 
-形態素解析と選択的SLMを組み合わせる、detection first / CPU-first / local-firstのテキスト妥当性評価基盤を開発しています。0.2開発版では評価core・Sudachi backend・旧Git/要約機能を分離しました。
+KazeNhanhは、OCR/ASRの機械認識テキストについて、形態素・語彙・文字列統計・言語モデル・認識器のconfidenceと候補情報を統合し、異常・不確実性・誤認識リスクを評価するローカル基盤を目指します。detection first / CPU-first / local-firstを維持し、naturalnessは補助指標とします。
 
-**P2一次検出MVPは完了、P3の二次制御契約を実装中です。** profileの入力制約と文字化け候補・括弧・形態素/文字の反復を検出します。意味整合性は未評価で、必要な二次判定を保留として返します。任意workerの遅延load・有界queue・予算・保留を実装済みです。実SLM adapterはP3、校正・品質受入はP4で追加します。[検出範囲とbaseline](docs/primary-detection.md)。
+**recognition risk中心のR0 APIを追加しました。** 無警告はundetermined、一次異常根拠はreview、riskは未推定/nullとして返します。confidence/candidates adapter、語彙統計、risk推定・校正はR1以降です。[新APIとCLI](docs/recognition-api.md)。 現在の0.2開発版はcore/Sudachi/legacy分離、限定的な一次screening、任意workerの遅延load・有界queue・予算制御を実装しています。現APIのacceptableは認識正解・低リスクを保証せず、旧APIの無警告acceptableを新APIの低リスクへ転用しません。新設計では証拠不足を判断不能として扱い、Qwen Naturalness Judgeは実験比較用へ位置付けます。[再設計案と移行順](docs/KZN-REDESIGN-PLAN-002.md) / [現screeningの範囲](docs/primary-detection.md)。
 
 ## 利用開始
+
+OCR/ASR向けのR0実行例: `cargo run --locked --offline --example recognize -- "節約する" ocr image-001 line-02`。証拠不足のためrisk=null / undeterminedとなります。以下のevaluate例は従来のscreening APIです。
 
 新PCの準備と固定辞書の取得は[セットアップ手順](docs/development-setup.md)を参照してください。
 
@@ -56,6 +58,9 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 ## 開発進捗
 
+- 2026-10-04: R0契約・保留APIを実装。別schema、evidence欠測、原文保持、risk=null、review/undetermined、モデル不要CLIを追加。提供OCR15件の保留・confidence保持を検証。R1が次の段階。
+- 2026-10-04: OCR実測を受け、recognition risk中心の[再設計案002](docs/KZN-REDESIGN-PLAN-002.md)を作成。R0契約/保留 → R1 OCR/ASR evidence → R2軽量baseline → R3選択LM/判別器 → R4校正/受入を次の実装順とします。以下のP0〜P3は従来設計での実装履歴です。
+
 - 2026-10-04: P2一次検出MVPを実装。profile・全形態素features・説明可能rules、4用途共通API、JSON runnerと34件baselineを追加。正常fixture19件で誤警報0、意味保留4件、SLM呼出0。実データの品質保証はP3/P4で評価。
 
 - 2026-10-04: P1完了。ユーザー承認後にcore/Sudachi/legacyをworkspaceへ分離し、0.2へ切替。モデル不要の標準facade、最小feature、legacy互換と移行ガイドを整備。
@@ -66,13 +71,14 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 ## 仕様・設計
 
-- [再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)
+- [recognition risk再設計案002（今後の方針）](docs/KZN-REDESIGN-PLAN-002.md)
+- [初回監査・計画001（履歴）](docs/KZN-REDESIGN-PLAN-001.md)
 - [API契約002](docs/KZN-API-SPEC-002.md)、[構成002](docs/KZN-ARC-DESIGN-002.md)、[要件002](docs/KZN-REQ-SPEC-002.md)
 - 001仕様と旧タスクはGit/要約機能の履歴として保持します。
 
 ## English
 
-KazeNhanh 0.2 is a local, detection-first text evaluation foundation. P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
+KazeNhanh targets local, detection-first recognition risk assessment for OCR and ASR. The proposed design combines text features with recognizer evidence and treats naturalness as an auxiliary signal. The R0 recognition API returns review for primary findings and undetermined otherwise, with risk unestimated. Typed source evidence and risk estimation remain pending. The separate 0.2 evaluation API provides limited text screening, and acceptable does not establish recognition correctness. See the [redesign proposal](docs/KZN-REDESIGN-PLAN-002.md). P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
 
 P2 includes explainable primary screening and profiles. Semantic consistency remains unassessed; unresolved candidates are explicitly held with the secondary judge disabled. Heuristic scores are not calibrated probabilities. P3 now provides an opt-in bounded lazy worker and strict secondary protocol; an experimental Qwen naturalness adapter is available, while Japanese quality/semantic adapter/CPU SLO acceptance remain pending. P4 adds calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).
 

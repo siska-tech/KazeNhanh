@@ -180,3 +180,29 @@ PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画�
 2026-10-04: 追加OCR 2画像/10件を原文・confidence・document ID付きで保存（計3画像/15件）。「体系キープ」「10kgやせる」の転記はユーザー確認済み、他8件は画像転記未確認。今回の転記差5件（確認済み1件）すべてが一次gateを通過。runner既定はモデル不要、SLM呼出/forward=0、Qwen比較は明示opt-inへ変更。P3品質未受入を維持。[追加データと観察](../docs/ocr-samples-user-002-003.md)。
 
 検証: 3データセットの既定runner実行、原文/confidence/document ID保持、SLM呼出/forward=0、featureなしQwen比較の拒否、qwen付きexample compile、workspace tests・cargo fmt・git diff --checkが成功。
+
+## recognition riskへの目的変更（2026-10-04）
+
+ユーザー指定により、OCR/ASRの機械認識結果の異常・不確実性・誤認識riskを主対象へ変更。[再設計案002](../docs/KZN-REDESIGN-PLAN-002.md)を今後の計画として優先する。naturalnessは補助指標、Qwen自然さjudgeは実験比較用。既存P0〜P2実績とP3制御基盤は保持し、意味adapter/Qwen自然さ品質の受入を認識riskの必須経路から外す。
+
+- [x] 現実装と15件のOCR開発観察を再監査し、残す基盤・変更する契約・低証拠時の保留・評価計画を文書化
+- [x] README、ROADMAP、現仕様/移行手順に新方針と未実装の区別を反映
+- [x] R0: RecognitionInput/Report、独立risk/adequacy/decision、証拠不足時のundetermined
+- [ ] R1: 型付きconfidence/candidates、OCR/ASR adapter/profile、欠測とalignment
+- [ ] R2: lexical/string統計を加えた軽量baseline、独立実OCR/ASR評価集合
+- [ ] R3: 選択LM surprisal/判別器、必要に応じclean/corrupted fine-tuning比較
+- [ ] R4: source/domain別校正、低リスク受理品質・CPU SLO、移行リリース
+
+今回の変更は設計文書のみ。Rust API・rule・score・モデル・15件の実測結果は変更していない。移行全体のstatusはprogress、end_dateは未設定。文書内リンク・差分形式を確認し、コードを変更していないため既存runtimeテストの再実行は省略する。
+
+## R0契約・保留の実装（2026-10-04）
+
+- [x] 別schema kzn.recognition.v1、新RecognitionEngine/Input/ReportとOCR/ASR source、必須document/segment ID
+- [x] risk target/校正/転記policyとnull、evidence family/state、coverage/adequacy/decisionを独立
+- [x] 無警告はundetermined、異常/制約はreview。低リスクpolicy未採用。naturalness未評価、モデル未接続
+- [x] 原文/raw annotationsを保持、高confidenceを合格へ変換せず、入力制約を認識誤り確定と区別
+- [x] モデル不要のSudachi facade / recognize CLI / 最小featureの公開API試験
+- [x] coreの偽造拒否/原文/span/batch契約、実Sudachiの提供OCR15件とASR正常/反復、既存APIの回帰
+- [x] verify.ps1 -Offline、依存境界、CLI実行、差分形式を確認
+
+実測: 新R0経路では提供OCR15件が全てundetermined / risk=null / SLM呼出0。検出品質改善の主張ではない。R1のtyped confidence/N-best/profile、R2の語彙/文字列統計、R3/R4の推定/校正は未実装。[契約と利用](../docs/recognition-api.md)。移行全体はprogress、end_dateは未設定。

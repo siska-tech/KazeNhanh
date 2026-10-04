@@ -1,5 +1,7 @@
 # P3選択的二次判定の制御契約
 
+> 2026-10-04追記: 以下は現行の自然さ/意味専用protocol。[再設計案002](KZN-REDESIGN-PLAN-002.md)ではworker実行制御を再利用し、risk evidence protocolとdecisionを分離する。Qwen自然さjudgeの品質受入を主経路の完了条件にしない。
+
 2026-10-04。優先用途はユーザー指定の日本語OCR/ASRの不自然さ検出。今回実装したのはbackend非依存の実行制御と契約。実験用Qwen自然さbackendを追加したが、意味adapter・日本語品質・CPU SLOは未受入であり、P3全体を完了にしない。
 
 ## 接続
