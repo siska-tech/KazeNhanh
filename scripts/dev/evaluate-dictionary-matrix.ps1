@@ -61,6 +61,7 @@ try {
                     dictionary_forms = @($tokens | ForEach-Object dictionary_form)
                     readings = @($tokens | ForEach-Object reading)
                     part_of_speech = @($tokens | ForEach-Object { ,$_.part_of_speech })
+                    string_features = $report.string_features
                     character_pairs = $statistics.value.character_pairs
                     words = $statistics.value.words
                     word_pairs = $statistics.value.word_pairs
@@ -88,6 +89,12 @@ try {
     $comparison = @()
     foreach ($id in @($allCases.Keys | Sort-Object)) {
         $variants = $allCases[$id]
+        $stringBaseline = $variants.small.string_features | ConvertTo-Json -Depth 20 -Compress
+        if ($null -eq $variants.small.string_features -or
+            $stringBaseline -cne ($variants.core.string_features | ConvertTo-Json -Depth 20 -Compress) -or
+            $stringBaseline -cne ($variants.full.string_features | ConvertTo-Json -Depth 20 -Compress)) {
+            throw 'Raw string observations must be present and identical across dictionaries.'
+        }
         $comparison += [ordered]@{ id = $id; variants = $variants
             segmentation_changed = (($variants.small.surfaces -join [char]31) -cne ($variants.core.surfaces -join [char]31) -or
                 ($variants.small.surfaces -join [char]31) -cne ($variants.full.surfaces -join [char]31))

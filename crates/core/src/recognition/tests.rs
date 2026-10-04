@@ -242,3 +242,31 @@ fn low_risk_contract_requires_calibrated_target_policy_coverage_and_threshold() 
     forged.recognition_risk.method = Some(ScoreMethod::Heuristic);
     assert!(forged.validate().is_err());
 }
+
+#[test]
+fn string_features_roundtrip_missing_legacy_and_tampering() {
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        let result = engine()
+            .evaluate_recognition(RecognitionInput::new("型番ZX-900B", source, "d", "s"))
+            .unwrap();
+        assert_eq!(result.decision, RecognitionDecision::Undetermined);
+        assert_eq!(result.recognition_risk.value, None);
+        assert_eq!(result.metrics.slm_calls, 0);
+        assert_eq!(
+            result.string_features,
+            Some(StringObservation::observe(&result.original_text))
+        );
+        let mut json = serde_json::to_value(&result).unwrap();
+        let decoded: RecognitionReport = serde_json::from_value(json.clone()).unwrap();
+        decoded.validate().unwrap();
+        json["string_features"]["scalar_count"] = serde_json::json!(0);
+        assert!(serde_json::from_value::<RecognitionReport>(json.clone())
+            .unwrap()
+            .validate()
+            .is_err());
+        json.as_object_mut().unwrap().remove("string_features");
+        let legacy: RecognitionReport = serde_json::from_value(json).unwrap();
+        assert!(legacy.string_features.is_none());
+        legacy.validate().unwrap();
+    }
+}

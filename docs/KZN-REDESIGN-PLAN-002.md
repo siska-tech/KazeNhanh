@@ -242,3 +242,7 @@ OOV＋未観測文字bigram＋未観測語bigramのsegment共起を明示opt-in�
 ## 19. POS bigram特徴（2026-10-05）
 
 全POS vectorの隣接頻度/未観測率/原文spanをv2統計assetに追加。旧v1読込・生成を維持し、品詞欠測とコーパス未観測を分離する。[契約](recognition-pos-statistics.md)。既定/実験判定は変更せず、追加の語列特徴として3辞書比較する。学習fusion・source policy・品質受入は未完了でR2はprogress。
+
+## 20. R2文字種観測（2026-10-05）
+
+固定範囲の文字種件数・隣接遷移span・省略数を辞書非依存で追加。原文照合による改ざん検証、旧JSON欠落互換を維持。混在そのものは異常判定に使わず、risk/decisionは維持。R2全体はprogress。[契約](recognition-string-features.md)。

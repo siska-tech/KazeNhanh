@@ -45,6 +45,9 @@ wire_enum!(RecognitionFindingKind {
     InputConstraint
 });
 
+mod string_features;
+pub use string_features::*;
+
 mod statistics;
 pub use statistics::*;
 
@@ -195,6 +198,8 @@ pub struct RecognitionReport {
     pub coverage: RecognitionCoverage,
     /// Naturalness remains unassessed by the R0 recognition path.
     pub naturalness: DimensionScore,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub string_features: Option<StringObservation>,
     pub metrics: EvaluationMetrics,
     pub provenance: Vec<ArtifactIdentity>,
     pub limitations: Vec<String>,
@@ -269,6 +274,9 @@ impl RecognitionReport {
             return Err(EvaluationError::Contract(
                 "an estimated recognition risk requires a transcription policy".into(),
             ));
+        }
+        if let Some(features) = &self.string_features {
+            features.validate(&self.original_text)?;
         }
         self.naturalness.validate()?;
         if self.naturalness.scope != ScoreScope::FullText {
@@ -543,6 +551,7 @@ impl RecognitionEngine {
             reasons.push(candidate_review::candidate_reason().into());
         }
         let mut report = RecognitionReport {
+            string_features: Some(StringObservation::observe(input.text)),
             schema_version: RECOGNITION_SCHEMA_VERSION.into(),
             original_text: input.text.into(),
             language: input.language.into(),

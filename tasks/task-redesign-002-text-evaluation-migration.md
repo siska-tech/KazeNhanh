@@ -298,3 +298,14 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 [仕様](../docs/recognition-pos-statistics.md)。R2はprogress。追加サンプル取得やASR実行はしない。
 
 検証結果: core48件（追加5）・v1/v2再現生成・3辞書matrix・最小API/source/実Sudachi等が成功。verify最終workspaceのWindows EXEロックは比較終了後の単独再試験で成功。POS未観測はsmall34/46、core/full33/43、欠測0。既定15件保留、risk=null/SLM0を維持。v1 assetのbyte/hash一致、format/リンク/PowerShell構文も確認。前回e859d49のCIは成功。
+
+## R2文字種観測（2026-10-05）
+- [x] 原文scalar固定分類・件数・遷移span・64件上限
+- [x] 原文再計算検証・旧JSON欠落互換・OCR/ASR保留契約
+- [ ] POS/文字種の判断条件・source policy/fusion・独立品質受入
+
+[仕様](../docs/recognition-string-features.md)。statusはprogressを維持。追加サンプル取得・ASR実行なし。
+
+検証: core52件（追加4件）成功。small/core/fullの15件すべてで文字種観測が一致し、既定review0/保留15・risk=null/SLM0を維持。前回dfb7db0のremote CI成功。
+
+workspace全体（all-features/offline）の単体・統合・doc testsも全件成功。format/diff、文書リンク、PowerShell構文確認済み。

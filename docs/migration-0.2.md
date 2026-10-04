@@ -71,3 +71,5 @@ Recognition R2統計evidence（先行実装）: LightweightStatisticsをwith_sta
 2026-10-05: with_candidate_disagreement_review()で、raw N-best差をreviewへ送るpolicyを明示選択できる。既定の判断とschema v2は維持。候補不一致を認識誤り確定・risk確率にしない。[候補review契約](recognition-candidate-review.md)。
 
 POS統計追加: StatisticsArtifact/StatisticsObservationにoptionalなposフィールドを追加。literal使用時は旧動作ならpos: Noneを指定する。fitはv1を維持、fit_with_posはv2を生成。[資産/JSON互換性](recognition-pos-statistics.md)。
+
+文字種観測（2026-10-05）: RecognitionReportにoptional string_featuresを追加。旧JSON欠落/nullは未観測。Rust literal構築にはstring_features: Noneが必要。旧readerで新フィールドを読む場合は更新する。[契約](recognition-string-features.md)。
