@@ -1,7 +1,7 @@
-//! Recognition risk contract. R0 supplies screening evidence, never a risk probability.
+//! Recognition risk contract. Screening and typed source evidence, no risk estimator yet.
 use crate::*;
 
-pub const RECOGNITION_SCHEMA_VERSION: &str = "kzn.recognition.v1";
+pub const RECOGNITION_SCHEMA_VERSION: &str = "kzn.recognition.v2";
 
 wire_enum!(RecognitionSource { Ocr, Asr });
 wire_enum!(RecognitionDecision {
@@ -45,6 +45,9 @@ wire_enum!(RecognitionFindingKind {
     InputConstraint
 });
 
+mod source_evidence;
+pub use source_evidence::*;
+
 impl RecognitionSource {
     fn source_kind(self) -> SourceKind {
         match self {
@@ -64,6 +67,7 @@ pub struct RecognitionInput<'a> {
     pub segment_id: &'a str,
     pub domain: Option<&'a str>,
     pub annotations: &'a [SourceAnnotation],
+    pub recognizer_evidence: Option<&'a RecognizerEvidence>,
 }
 impl<'a> RecognitionInput<'a> {
     pub fn new(
@@ -80,6 +84,7 @@ impl<'a> RecognitionInput<'a> {
             segment_id,
             domain: None,
             annotations: &[],
+            recognizer_evidence: None,
         }
     }
 }
@@ -168,6 +173,7 @@ pub struct RecognitionReport {
     pub segment_id: String,
     pub domain: Option<String>,
     pub annotations: Vec<SourceAnnotation>,
+    pub recognizer_evidence: Option<RecognizerEvidence>,
     pub profile_id: String,
     pub transcription_policy_id: Option<String>,
     pub recognition_risk: RecognitionRisk,
@@ -198,6 +204,47 @@ impl RecognitionReport {
         {
             return Err(EvaluationError::Contract(
                 "invalid recognition report identity/reasons".into(),
+            ));
+        }
+        if let Some(source_evidence) = &self.recognizer_evidence {
+            source_evidence.validate(&self.original_text, self.source)?;
+            if self.profile_id != source_evidence.profile.id
+                || self.transcription_policy_id != source_evidence.profile.transcription_policy_id
+            {
+                return Err(EvaluationError::Contract(
+                    "recognizer profile must match report profile".into(),
+                ));
+            }
+            if !source_evidence.missing_required_signals().is_empty()
+                && (self.evidence_adequacy == EvidenceAdequacy::Sufficient
+                    || self.decision == RecognitionDecision::LowRisk
+                    || !self
+                        .reasons
+                        .iter()
+                        .any(|reason| reason == "required_source_signals_missing"))
+            {
+                return Err(EvaluationError::Contract(
+                    "missing required source signals cannot establish sufficient evidence".into(),
+                ));
+            }
+            let row = self
+                .evidence
+                .iter()
+                .find(|e| e.kind == RecognitionEvidenceKind::Recognizer);
+            if row.is_none_or(|e| {
+                e.status != RecognitionEvidenceStatus::Observed
+                    || e.value.as_ref() != Some(&source_evidence.summary())
+            }) {
+                return Err(EvaluationError::Contract(
+                    "recognizer summary must match typed evidence".into(),
+                ));
+            }
+        } else if self.evidence.iter().any(|e| {
+            e.kind == RecognitionEvidenceKind::Recognizer
+                && e.status == RecognitionEvidenceStatus::Observed
+        }) {
+            return Err(EvaluationError::Contract(
+                "observed recognizer evidence needs typed source data".into(),
             ));
         }
         self.recognition_risk.validate()?;
@@ -257,6 +304,11 @@ impl RecognitionReport {
                     "inconsistent recognition evidence state/value".into(),
                 ));
             }
+        }
+        if self.coverage.source_completeness_assessed {
+            return Err(EvaluationError::Contract(
+                "source completeness is not supported by the current recognition contract".into(),
+            ));
         }
         let whole = vec![ByteSpan::whole(&self.original_text)];
         let estimated = self.recognition_risk.status == RecognitionAssessmentStatus::Estimated;
@@ -361,6 +413,14 @@ impl RecognitionEngine {
                 "document and segment identities are required".into(),
             ));
         }
+        if input.language != "ja" || input.text.len() > self.screening.config.max_input_bytes {
+            return Err(EvaluationError::InvalidInput(
+                "only ja is supported; input must fit max_input_bytes".into(),
+            ));
+        }
+        if let Some(evidence) = input.recognizer_evidence {
+            evidence.validate(input.text, input.source)?;
+        }
         let mut text_input = TextInput::new(input.text);
         text_input.language = input.language;
         text_input.source = input.source.source_kind();
@@ -415,6 +475,7 @@ impl RecognitionEngine {
             segment_id: input.segment_id.into(),
             domain: input.domain.map(str::to_owned),
             annotations: screening.annotations,
+            recognizer_evidence: input.recognizer_evidence.cloned(),
             profile_id: "ja.recognition.r0.v1".into(),
             transcription_policy_id: None,
             recognition_risk: RecognitionRisk {
@@ -506,6 +567,38 @@ impl RecognitionEngine {
             id: report.decision_policy.id.clone(),
             sha256: None,
         });
+        if let Some(source_evidence) = input.recognizer_evidence {
+            report.profile_id = source_evidence.profile.id.clone();
+            if !source_evidence.missing_required_signals().is_empty() {
+                report
+                    .reasons
+                    .push("required_source_signals_missing".into());
+            }
+            report.transcription_policy_id =
+                source_evidence.profile.transcription_policy_id.clone();
+            let row = report
+                .evidence
+                .iter_mut()
+                .find(|e| e.kind == RecognitionEvidenceKind::Recognizer)
+                .expect("fixed evidence families");
+            row.status = RecognitionEvidenceStatus::Observed;
+            row.provider_id = "kzn.source_evidence.v1".into();
+            row.value = Some(source_evidence.summary());
+            row.reason = "typed_recognizer_evidence_not_correctness_probability".into();
+            report.limitations.retain(|reason| {
+                reason != "source_specific_evidence_not_interpreted"
+                    && !(reason == "transcription_policy_not_configured"
+                        && report.transcription_policy_id.is_some())
+            });
+            report
+                .limitations
+                .push("source_scores_not_normalized_or_fused".into());
+            report.provenance.push(ArtifactIdentity {
+                component: "source_profile".into(),
+                id: source_evidence.profile.id.clone(),
+                sha256: None,
+            });
+        }
         report.validate()?;
         Ok(report)
     }

@@ -1,6 +1,6 @@
 # KZN-API-SPEC-002: テキスト評価契約
 
-> 2026-10-04追記: 本書は現行kzn.evaluation.v3の契約。新しいrecognition risk APIは[再設計案002](KZN-REDESIGN-PLAN-002.md)で別schemaとして提案している。現acceptableを新low_riskへ自動変換しない。R0は[recognition API](recognition-api.md)として追加済み。confidence/candidatesとrisk推定は未実装。
+> 2026-10-04追記: 本書は現行kzn.evaluation.v3の契約。新しいrecognition risk APIは[再設計案002](KZN-REDESIGN-PLAN-002.md)で別schemaとして提案している。現acceptableを新low_riskへ自動変換しない。R0は[recognition API](recognition-api.md)として追加済み。R1の[typed confidence/candidatesとadapter](recognition-source-evidence.md)も追加済み。risk推定は未実装。
 
 2026-10-04 / P1〜P3制御契約。新しいRust APIの契約。既存0.1の要約APIとは別の意味を持つ。
 

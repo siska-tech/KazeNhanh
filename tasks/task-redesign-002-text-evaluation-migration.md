@@ -188,7 +188,7 @@ PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画�
 - [x] 現実装と15件のOCR開発観察を再監査し、残す基盤・変更する契約・低証拠時の保留・評価計画を文書化
 - [x] README、ROADMAP、現仕様/移行手順に新方針と未実装の区別を反映
 - [x] R0: RecognitionInput/Report、独立risk/adequacy/decision、証拠不足時のundetermined
-- [ ] R1: 型付きconfidence/candidates、OCR/ASR adapter/profile、欠測とalignment
+- [x] R1: 型付きconfidence/candidates、OCR/ASR adapter/profile、欠測とalignment
 - [ ] R2: lexical/string統計を加えた軽量baseline、独立実OCR/ASR評価集合
 - [ ] R3: 選択LM surprisal/判別器、必要に応じclean/corrupted fine-tuning比較
 - [ ] R4: source/domain別校正、低リスク受理品質・CPU SLO、移行リリース
@@ -206,3 +206,14 @@ PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画�
 - [x] verify.ps1 -Offline、依存境界、CLI実行、差分形式を確認
 
 実測: 新R0経路では提供OCR15件が全てundetermined / risk=null / SLM呼出0。検出品質改善の主張ではない。R1のtyped confidence/N-best/profile、R2の語彙/文字列統計、R3/R4の推定/校正は未実装。[契約と利用](../docs/recognition-api.md)。移行全体はprogress、end_dateは未設定。
+
+## R1 source evidenceの実装（2026-10-04）
+
+- [x] confidenceの元f64値・意味・方向・range・粒度・集約法・calibration/target・欠測理由・依存ID
+- [x] N-best rank/raw score成分・打切り/unknown・候補固有座標、bounded Unicode-scalar alignment
+- [x] core共通型とfacadeのOCR bbox / ASR時刻・粒度adapter、source profile/必須signal/転記policy
+- [x] 新report kzn.recognition.v2とtyped evidence整合検証。旧v1・不正source/span/summary/false completenessを拒否
+- [x] 提供OCR15件のconfidence保持runner、参照/期待label非投入、候補/bboxを捏造しない
+- [x] minimalでのsource契約9件とverify.ps1 -Offline成功。core/default/minimal/optional依存境界・全workspace回帰、formatと文書リンクを確認
+
+提供OCR15件は全てundetermined / risk=null / SLM呼出0。confidenceはsegment粒度の未校正engine_score、方向/集約法/targetは不明として保持。実ASRデータは未取得、合成fixtureは契約試験のみ。risk推定・校正・モデル選定・検出品質受入はR2以降。[実装と互換性](../docs/recognition-source-evidence.md)。移行全体はprogress。

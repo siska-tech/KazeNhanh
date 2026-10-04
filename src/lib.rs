@@ -51,3 +51,5 @@ pub fn japanese_recognition_engine(
         recognition,
     )
 }
+
+pub mod source_adapters;

@@ -4,7 +4,7 @@
 
 KazeNhanhは、OCR/ASRの機械認識テキストについて、形態素・語彙・文字列統計・言語モデル・認識器のconfidenceと候補情報を統合し、異常・不確実性・誤認識リスクを評価するローカル基盤を目指します。detection first / CPU-first / local-firstを維持し、naturalnessは補助指標とします。
 
-**recognition risk中心のR0 APIを追加しました。** 無警告はundetermined、一次異常根拠はreview、riskは未推定/nullとして返します。confidence/candidates adapter、語彙統計、risk推定・校正はR1以降です。[新APIとCLI](docs/recognition-api.md)。 現在の0.2開発版はcore/Sudachi/legacy分離、限定的な一次screening、任意workerの遅延load・有界queue・予算制御を実装しています。現APIのacceptableは認識正解・低リスクを保証せず、旧APIの無警告acceptableを新APIの低リスクへ転用しません。新設計では証拠不足を判断不能として扱い、Qwen Naturalness Judgeは実験比較用へ位置付けます。[再設計案と移行順](docs/KZN-REDESIGN-PLAN-002.md) / [現screeningの範囲](docs/primary-detection.md)。
+**recognition risk中心のR0/R1 APIを追加しました。** 無警告はundetermined、一次異常根拠はreview、riskは未推定/nullとして返します。型付きconfidence/N-best、OCR/ASR位置adapter、欠測とprofileをR1で追加。語彙統計、risk推定・校正はR2以降です。[Source evidence](docs/recognition-source-evidence.md)。[新APIとCLI](docs/recognition-api.md)。 現在の0.2開発版はcore/Sudachi/legacy分離、限定的な一次screening、任意workerの遅延load・有界queue・予算制御を実装しています。現APIのacceptableは認識正解・低リスクを保証せず、旧APIの無警告acceptableを新APIの低リスクへ転用しません。新設計では証拠不足を判断不能として扱い、Qwen Naturalness Judgeは実験比較用へ位置付けます。[再設計案と移行順](docs/KZN-REDESIGN-PLAN-002.md) / [現screeningの範囲](docs/primary-detection.md)。
 
 ## 利用開始
 
@@ -58,6 +58,7 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 ## 開発進捗
 
+- 2026-10-04: R1 typed source evidenceを実装。confidence尺度/粒度/欠測、N-best/UTF-8 alignment、OCR bbox/ASR時刻adapter・profile、モデル不要runnerを追加。report schemaはkzn.recognition.v2。提供OCR15件の保持・全件保留、合成OCR/ASR契約と回帰を検証。次はR2。
 - 2026-10-04: R0契約・保留APIを実装。別schema、evidence欠測、原文保持、risk=null、review/undetermined、モデル不要CLIを追加。提供OCR15件の保留・confidence保持を検証。R1が次の段階。
 - 2026-10-04: OCR実測を受け、recognition risk中心の[再設計案002](docs/KZN-REDESIGN-PLAN-002.md)を作成。R0契約/保留 → R1 OCR/ASR evidence → R2軽量baseline → R3選択LM/判別器 → R4校正/受入を次の実装順とします。以下のP0〜P3は従来設計での実装履歴です。
 
@@ -78,7 +79,7 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 ## English
 
-KazeNhanh targets local, detection-first recognition risk assessment for OCR and ASR. The proposed design combines text features with recognizer evidence and treats naturalness as an auxiliary signal. The R0 recognition API returns review for primary findings and undetermined otherwise, with risk unestimated. Typed source evidence and risk estimation remain pending. The separate 0.2 evaluation API provides limited text screening, and acceptable does not establish recognition correctness. See the [redesign proposal](docs/KZN-REDESIGN-PLAN-002.md). P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
+KazeNhanh targets local, detection-first recognition risk assessment for OCR and ASR. The proposed design combines text features with recognizer evidence and treats naturalness as an auxiliary signal. The R0 recognition API returns review for primary findings and undetermined otherwise, with risk unestimated. R1 adds typed confidence, N-best alignment and source adapters; risk estimation remains pending. The recognition report schema is kzn.recognition.v2. The separate 0.2 evaluation API provides limited text screening, and acceptable does not establish recognition correctness. See the [redesign proposal](docs/KZN-REDESIGN-PLAN-002.md). P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
 
 P2 includes explainable primary screening and profiles. Semantic consistency remains unassessed; unresolved candidates are explicitly held with the secondary judge disabled. Heuristic scores are not calibrated probabilities. P3 now provides an opt-in bounded lazy worker and strict secondary protocol; an experimental Qwen naturalness adapter is available, while Japanese quality/semantic adapter/CPU SLO acceptance remain pending. P4 adds calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).
 

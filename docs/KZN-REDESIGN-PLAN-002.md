@@ -2,7 +2,7 @@
 
 - 作成日: 2026-10-04 (Asia/Tokyo)
 - 監査対象: `2d2e111`、0.2開発版 / `kzn.evaluation.v3`
-- 状態: ユーザーの目的変更を反映した計画。R0契約/保留を実装済み、R1以降は未実装。[R0 API](recognition-api.md)。
+- 状態: ユーザーの目的変更を反映した計画。R0契約/保留とR1 source evidenceを実装済み、R2以降は未実装。[R1 API](recognition-source-evidence.md)。[R0 API](recognition-api.md)。
 - 優先順位: 今後の目的・移行順は本書を優先。旧PLAN-001の監査履歴、P0〜P2実績、API-SPEC-002の現行動作は保持する。
 - 実装追跡: [移行タスク](../tasks/task-redesign-002-text-evaluation-migration.md)。以下は設計時の提案、実装済み範囲はR0 API文書を参照。
 
@@ -206,3 +206,7 @@ P0〜P2の完了は基盤/旧screeningの実績として保持する。P3の目�
 ## 11. R0実装記録（2026-10-04）
 
 RecognitionEngine/Input/Reportとモデル不要facade/CLIを追加。旧screeningのacceptableを転用せず、無警告は保留、一次根拠はreview。提供OCR15件の原文/confidence保持・全件undeterminedとSLM呼出0を検証。risk推定やsource evidence解釈は未実装。次の段階はR1。[現API](recognition-api.md)。
+
+## 12. R1実装記録（2026-10-04）
+
+typed confidence/候補/profile、依存ID、欠測/unknown、bounded Unicode alignmentとsource anchorを追加。OCR bboxとASR時刻/粒度をfacade adapterで検証。reportはkzn.recognition.v2、source evidenceはkzn.recognizer.v1。提供OCR15件は元confidenceの尺度/方向/集約法を推測せず、全件undetermined・risk=null・SLM呼出0。goldから候補を作らない。ASRは合成契約fixtureで、実品質未評価。次はR2。[R1 APIと検証](recognition-source-evidence.md)。

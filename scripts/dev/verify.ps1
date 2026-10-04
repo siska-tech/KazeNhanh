@@ -30,6 +30,7 @@ try {
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_core') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'evaluation_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_contracts') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_source_evidence') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_nlp') + $networkArgs)
     # Production legacy runtime stays real; only fixtures use explicit mocks.
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)

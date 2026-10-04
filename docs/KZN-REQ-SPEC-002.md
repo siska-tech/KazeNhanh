@@ -1,6 +1,6 @@
 # KZN-REQ-SPEC-002: ローカルテキスト評価基盤
 
-> 2026-10-04追記: 以下は現0.2の実装要件の記録。今後の製品目的・要件は[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)を優先する。naturalnessは補助指標へ変更し、OCR/ASR evidence・証拠充足・判断不能を中心とする。R0契約は[recognition API](recognition-api.md)として追加済み。R1以降は未実装。
+> 2026-10-04追記: 以下は現0.2の実装要件の記録。今後の製品目的・要件は[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)を優先する。naturalnessは補助指標へ変更し、OCR/ASR evidence・証拠充足・判断不能を中心とする。R0契約は[recognition API](recognition-api.md)として追加済み。R1の[source evidence](recognition-source-evidence.md)も追加済み。R2以降は未実装。
 
 2026-10-04。旧001要件はGit/要約応用層の履歴。新基盤の要件と段階はKZN-REDESIGN-PLAN-001、API契約はKZN-API-SPEC-002を優先する。
 

@@ -1,5 +1,7 @@
 # Recognition API: R0契約と保留
 
+> 2026-10-04: R1でtyped confidence/candidates/adapterを追加し、report schemaをkzn.recognition.v2へ更新。以下はR0の判断契約の説明。[R1と移行事項](recognition-source-evidence.md)。
+
 2026-10-04。実装済みのR0。[再設計案002](KZN-REDESIGN-PLAN-002.md)の最初の段階。OCR/ASR用のモデル不要APIを追加し、無警告を低リスクへ変換する経路を持たせない。
 
 ## 利用
@@ -24,7 +26,7 @@ report.validate()?;
 
 ## 出力と判定
 
-JSONは`kzn.recognition.v1`。従来の`kzn.evaluation.v3` / evaluateとは別契約。
+現JSONは`kzn.recognition.v2`（R0時点のv1から更新）。従来の`kzn.evaluation.v3` / evaluateとは別契約。
 
 | フィールド | R0の意味 |
 | --- | --- |
@@ -39,15 +41,15 @@ JSONは`kzn.recognition.v1`。従来の`kzn.evaluation.v3` / evaluateとは別�
 | decision_policy | kzn.recognition.abstain.v1。低リスク閾値と校正IDは未設定 |
 | metrics/provenance | 形態素features・辞書/設定/rule/policy識別、SLM呼出0 |
 
-SourceAnnotationを原文spanとともにそのまま保持する。raw JSON内のconfidence・候補・bbox等は解釈しない。annotationがあればrecognizer evidenceはunsupportedで理由を残す。何もなければmissing。高いraw confidenceを確率や低リスク根拠へ変換しない。
+typed source evidenceを渡した場合はrecognizer familyをobservedとして返す。詳細はR1文書を参照。SourceAnnotationを原文spanとともにそのまま保持する。raw JSON内のconfidence・候補・bbox等は解釈しない。annotationがあればrecognizer evidenceはunsupportedで理由を残す。何もなければmissing。高いraw confidenceを確率や低リスク根拠へ変換しない。
 
 厳格JSON deserializeに加えて`RecognitionReport::validate()`が必要。未知schema/field、不正span、evidenceの重複/欠落・state/value不一致、未推定のrisk値、偽の評価coverage、根拠不足のlow_riskを拒否する。将来のlow_riskにはcalibrated method・校正ID・転記policy・risk estimatorの観測状態・十分な証拠・risk評価範囲・同じ校正IDのdecision policy・閾値内risk・未解決warning/errorなしを要求する。構造検証はモデル品質や校正の正しさを証明しない。
 
 ## 現実装の境界
 
-既存のPrimaryRulesを証拠抽出に利用し、そのacceptableとnaturalness scoreは新判断へ転用しない。R0ではsource固有profile、型付きconfidence/N-best、語彙統計、risk estimator、LM scorer、校正をまだ実装していない。旧SecondaryWorker/Qwenを新engineへ接続するAPIは持たない。
+既存のPrimaryRulesを証拠抽出に利用し、そのacceptableとnaturalness scoreは新判断へ転用しない。R0時点ではsource固有profile、型付きconfidence/N-bestは未実装だった。R1で追加済み。語彙統計、risk estimator、LM scorer、校正は未実装。旧SecondaryWorker/Qwenを新engineへ接続するAPIは持たない。
 
-旧evaluate APIはそのまま利用可能だが、OCR/ASRの新規利用はrecognition APIを推奨する。R0で保留できることと誤りを検出できることを区別する。次はR1でconfidence/candidatesの型、adapter/profile、欠測とalignmentを追加する。
+旧evaluate APIはそのまま利用可能だが、OCR/ASRの新規利用はrecognition APIを推奨する。R0で保留できることと誤りを検出できることを区別する。R1でconfidence/candidatesの型、adapter/profile、欠測とalignmentを追加済み。次はR2の軽量統計baseline。
 
 ## 検証
 

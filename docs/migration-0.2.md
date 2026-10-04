@@ -63,3 +63,5 @@ mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ�
 P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。
 
 P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。
+
+Recognition R1への移行: reportはkzn.recognition.v2、新typed evidenceをRecognitionInput.recognizer_evidenceへ追加可能。旧v1 JSONは新consumerで再評価する。原文を再解釈せず、旧evaluation.v3は維持。[R1契約と互換性](recognition-source-evidence.md)。
