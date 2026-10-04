@@ -40,3 +40,4 @@ decisionごとに「確認済み一致・確認済み不一致・未確認」の
 提供15件は確認済み7件（一致3、不一致4）と未確認8件に分かれる。small/core/fullすべてでreview=0、undetermined=15、low_risk=0。確認済み不一致4件は全て保留に残り、review recall=0%、保留率=100%、low-risk coverage=0%。review precisionとlow-risk error rateは分母0のためnull。原資料3画像内の相関があり、独立testやASR品質の根拠にはしない。出力は常に`quality_accepted=false`、`development_observation_not_held_out_test`を明示する。
 
 独立した実OCR/ASR集合、文書/話者単位のsplit、代表domainでのquality/CPU受入、text/source/統合ablationと統計的な不確実性の評価はR2以降の残作業。今回の集計結果に閾値を合わせ込まない。
+データ準備時は[split監査](recognition-datasets.md)でgroup重複・未確認test・入力hashを検証する。監査成功は代表品質やラベル真正性の保証ではない。

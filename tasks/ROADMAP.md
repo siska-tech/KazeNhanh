@@ -55,3 +55,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-05: [R2候補review baseline](../docs/recognition-candidate-review.md)を追加。raw候補不一致を明示opt-inでreviewへ送り、rank/spanを保存。人工12例を3辞書で比較。候補の正解性・誤り確率は未推定で、R2実品質受入は継続。
 
 2026-10-05: [R2オフライン品質集計](../docs/recognition-quality.md)を追加。確認済み転記だけでreview精度/再現率と低リスク受理率を計算し、保留を検出成功に数えない。3辞書matrixへ統合。独立実OCR/ASR評価とfusionは未完了。
+
+2026-10-05: [評価データsplit監査と公開サンプル取得](../docs/recognition-datasets.md)を追加。人工fixtureと実測を区別し、実OCR/ASR集合の採用・融合判定は引き続きR2の残作業。

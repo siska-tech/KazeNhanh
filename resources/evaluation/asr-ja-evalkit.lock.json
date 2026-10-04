@@ -1,0 +1,33 @@
+{
+    "schema_version":  "kzn.public_sample.lock.v1",
+    "repository":  "https://github.com/ouktlab/asr-ja_evalkit",
+    "revision":  "837f8ccc1f8b97d492a94f4c14b490a21df98920",
+    "role":  "illustrative_orthographic_variant_pair_not_verified_asr_measurement",
+    "license":  "Apache-2.0",
+    "files":  [
+                  {
+                      "name":  "egs_hyplist.txt",
+                      "url":  "https://raw.githubusercontent.com/ouktlab/asr-ja_evalkit/837f8ccc1f8b97d492a94f4c14b490a21df98920/sample/egs_hyplist.txt",
+                      "sha256":  "7550c7fe766e29d9017482239f207f952b511c165f7aee1a933025fcdb9e88e8",
+                      "bytes":  74
+                  },
+                  {
+                      "name":  "egs_reflist.txt",
+                      "url":  "https://raw.githubusercontent.com/ouktlab/asr-ja_evalkit/837f8ccc1f8b97d492a94f4c14b490a21df98920/sample/egs_reflist.txt",
+                      "sha256":  "19a014a83bcfa3dadb6c099c97bf6d7bf1cff254d1a3dd73606d0ac70bbaecb8",
+                      "bytes":  99
+                  },
+                  {
+                      "name":  "LICENSE",
+                      "url":  "https://raw.githubusercontent.com/ouktlab/asr-ja_evalkit/837f8ccc1f8b97d492a94f4c14b490a21df98920/LICENSE",
+                      "sha256":  "908ef8ddc246b651f7cf6901d258b85f992472ef635ff1e3c909eee121ece118",
+                      "bytes":  11362
+                  },
+                  {
+                      "name":  "README.md",
+                      "url":  "https://raw.githubusercontent.com/ouktlab/asr-ja_evalkit/837f8ccc1f8b97d492a94f4c14b490a21df98920/README.md",
+                      "sha256":  "e7591a1e1aec7807ee04c455c433ebf8b8703863eb44a0c7b43fd6be8eb188ec",
+                      "bytes":  31635
+                  }
+              ]
+}

@@ -93,3 +93,5 @@ P2 includes explainable primary screening and profiles. Semantic consistency rem
 2026-10-05: [R2候補review baseline](docs/recognition-candidate-review.md)を追加。raw候補不一致を明示opt-inでreviewへ送り、rank/spanを保存。人工12例を3辞書で比較。候補の正解性・誤り確率は未推定で、R2実品質受入は継続。
 
 2026-10-05: [R2オフライン品質集計](docs/recognition-quality.md)を追加。確認済み転記と未確認を分け、review・保留・low_riskの件数と分母を保持。small/core/fullのローカルmatrixに統合。実データでの受入・統合判定は継続。
+
+2026-10-05: [R2評価データのsplit監査](docs/recognition-datasets.md)を追加。document/origin/話者/session・同一転記のsplit跨ぎと未確認testを拒否。公開ASR説明例1対は固定取得し、実測品質データへは昇格させない。

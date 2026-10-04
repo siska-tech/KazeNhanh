@@ -261,3 +261,16 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 [仕様](../docs/recognition-quality.md)。R2全体はprogress。評価器の追加であり、検出品質が改善したとは扱わない。
 
 検証結果: verify.ps1 -Offline成功。追加4契約試験、small/core/full全matrix再実行、文書リンク・PowerShell構文・format/diff成功。3辞書とも確認済み7件（一致3/不一致4）、未確認8件、全15件保留。確認済み不一致review recall=0%、low-risk error rate=null。前回b988f1cのremote CIは成功。
+
+## R2データ分割監査・公開サンプル取得（2026-10-05）
+
+- [x] manifest/JSONL hash、一対一ID/source/document照合、版付き比較規約
+- [x] document/origin/話者/session/非空転記hashのsplit跨ぎ拒否、未確認はdevelopmentのみ
+- [x] 人工4件fixtureと4契約テスト、verifyへ監査CLI/テストを登録
+- [x] GitHubの説明例1対・README/LICENSEを固定commit/hashで取得、再取得/Offline検証スクリプト
+- [x] 初回取得、offline再利用、隔離人工fixtureの破損/欠落/path/source拒否
+- [ ] 独立実OCR/ASRデータの採用、統合baseline・ablationと受入
+
+[仕様](../docs/recognition-datasets.md)。公開説明例を実測やverifiedへ昇格せず、詳細原ファイルはtarget保存。取得時の自動承認レビューは当初利用上限で失敗したが、ユーザーの上限リセット後の指示で取得成功。移行statusはprogressを維持する。
+
+検証結果: verify.ps1 -Offline成功、split監査4契約＋CLI、取得スクリプトの隔離offline契約、文書リンク/PowerShell構文/format/diff成功。前回75f129cのremote CIも成功。認識runtimeは変更せず、3辞書の品質値を新規実測として再計上しない。

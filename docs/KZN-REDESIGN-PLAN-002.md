@@ -230,3 +230,7 @@ R2先行実装として、明示的opt-inのraw候補不一致review policyを�
 ## 16. オフライン品質集計（2026-10-05）
 
 既存reportと確認済み転記の一対一照合、版付きraw/先頭bullet比較、decision別の一致/不一致/未確認件数と分母0のnullを実装。推論とgold照合を分離し、保留を検出成功へ変換しない。small/core/fullのローカルmatrixへ接続。[契約・指標](recognition-quality.md)。独立実OCR/ASR対・split・融合判定・品質受入は残り、R2はprogress。
+
+## 17. 評価データsplit監査（2026-10-05）
+
+宣言されたdocument/origin/speaker/session・非空転記hashのsplit跨ぎ、未確認のtrain/calibration/test混入、入力hash不一致を拒否するオフライン監査器を追加。人工4件で契約のみ検証。公開ASR-ja Evaluation Kitの説明例1対をcommit/hash固定で取得したが、実認識由来を確認できないため独立実ASR集合には数えない。[仕様・出所](recognition-datasets.md)。独立実認識対・追加特徴/fusion・品質受入は未完了で、R2はprogress。

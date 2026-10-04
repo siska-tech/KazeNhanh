@@ -37,6 +37,10 @@ try {
     Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'candidate_baseline') + $networkArgs + @('--',
         'resources/sudachi/system.dic', 'evaluation/candidate-review-contract.jsonl', 'target/candidate-review-contract.json'))
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--example', 'recognition_quality') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--example', 'validate_recognition_dataset') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--no-default-features', '--example', 'validate_recognition_dataset') + $networkArgs + @('--',
+        'tests/fixtures/dataset/synthetic.manifest.json', 'tests/fixtures/dataset/synthetic.jsonl', 'target/dataset-contract-audit.json'))
+    & (Join-Path $PSScriptRoot 'test-asr-sample-setup.ps1')
     # Production legacy runtime stays real; only fixtures use explicit mocks.
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--features', 'legacy', '--test', 'nlp_resources') + $networkArgs)

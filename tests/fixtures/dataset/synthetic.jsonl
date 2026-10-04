@@ -1,0 +1,4 @@
+{"id":"asr.train.1","source":"asr","document_id":"recording-a","text":"会議を始めます","transcription":"会議を始めます","transcription_status":"verified","comparison_policy":"raw.v1"}
+{"id":"asr.calibration.1","source":"asr","document_id":"recording-b","text":"電車で移動する","transcription":"電車で移動します","transcription_status":"verified","comparison_policy":"raw.v1"}
+{"id":"ocr.test.1","source":"ocr","document_id":"image-c","text":"受付は三階","transcription":"受付は二階","transcription_status":"verified","comparison_policy":"raw.v1"}
+{"id":"ocr.development.1","source":"ocr","document_id":"image-d","text":"雨の日","transcription":"雨の目","transcription_status":"unconfirmed","comparison_policy":"raw.v1"}
