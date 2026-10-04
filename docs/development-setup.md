@@ -58,12 +58,12 @@ RustのSudachi v0.6.9はCargo.lockで固定する。辞書は公式配布の[Sud
 
 | コマンド | 確認するもの |
 | --- | --- |
-| `cargo check --locked --lib` | mock featureなしの本番runtimeを型検査 |
+| `cargo check --locked --lib` | 本番runtimeを型検査（mock featureでも置換されない） |
 | `cargo test --locked --test nlp_resources` | 実辞書と本番NLP。SLMの初期化・推論は行わない |
-| `cargo test --locked --features mock_inference` | unit testsと登録済みGit/要約/並行性workflow。SLMだけモック、NLPは実辞書 |
+| `cargo test --locked --features mock_inference` | unit testsと登録済みGit/要約/並行性workflow。workflowは明示的にSLM fakeを注入、NLPは実辞書。本番CPUの合成GGUF試験も実行 |
 | `scripts/dev/verify.ps1` | 上記とformat、期待する結合・並行性テスト名の登録を確認 |
 
-`cargo test`のunit testには既存のcfg(test)によるSLM置換が残る。実モデルの正確さ・速度やtokenizer互換性はこれで保証しない。完全なfake注入、本番SLMの資産検証はIssue #2/P0の残作業。
+`cargo test`でも本番runtimeをコンパイルし、fakeは明示的に注入する。合成量子化GGUFでCPU forwardとKV cacheを確認するが、学習済みSLMの精度・速度は未検証。[推論資産検証手順](inference_engine.md)に従ってverify-model.ps1へローカルGGUF・tokenizer・参照token IDを渡す。
 
 ## Linux CI
 

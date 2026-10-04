@@ -4,25 +4,44 @@ use tokenizers::Tokenizer;
 use crate::{EngineConfig, KazeNhanhError};
 
 mod model;
+mod tokenizer;
 use model::KazeModel;
 
+/// Backends are injected explicitly; compiling tests never replaces the runtime.
+pub(crate) trait InferenceBackend: Send {
+    fn synthesize(&mut self, prompt: &str) -> candle_core::Result<String>;
+    fn tokenizer(&self) -> Arc<Mutex<Tokenizer>>;
+    fn model_size(&self) -> usize;
+    fn is_cpu_device(&self) -> bool;
+}
+
 pub(crate) struct InferenceEngine {
-    model: KazeModel,
-    tokenizer: Arc<Mutex<Tokenizer>>,
+    model: Box<dyn InferenceBackend>,
 }
 
 impl InferenceEngine {
     pub(crate) fn new(config: &EngineConfig) -> Result<Self, KazeNhanhError> {
-        let model = KazeModel::load(config.model_bytes)
+        Self::new_with_tokenizer(config, None)
+    }
+
+    pub(crate) fn new_with_tokenizer(
+        config: &EngineConfig,
+        tokenizer_bytes: Option<&[u8]>,
+    ) -> Result<Self, KazeNhanhError> {
+        let model = KazeModel::load(config.model_bytes, tokenizer_bytes)
             .map_err(|source| KazeNhanhError::ModelLoadError { source })?;
+        Ok(Self::with_backend(Box::new(model)))
+    }
 
-        model
-            .ensure_cpu_device()
+    pub(crate) fn with_backend(model: Box<dyn InferenceBackend>) -> Self {
+        Self { model }
+    }
+
+    #[cfg(any(test, feature = "mock_inference"))]
+    pub(crate) fn mock(bytes: &[u8]) -> Result<Self, KazeNhanhError> {
+        let model = model::MockModel::load(bytes)
             .map_err(|source| KazeNhanhError::ModelLoadError { source })?;
-
-        let tokenizer = model.tokenizer();
-
-        Ok(Self { model, tokenizer })
+        Ok(Self::with_backend(Box::new(model)))
     }
 
     pub(crate) fn synthesize(&mut self, prompt: &str) -> Result<String, KazeNhanhError> {
@@ -31,7 +50,6 @@ impl InferenceEngine {
                 "Prompt for inference is empty".to_string(),
             ));
         }
-
         self.model
             .synthesize(prompt)
             .map_err(|source| KazeNhanhError::ModelInferenceError { source })
@@ -44,7 +62,7 @@ impl InferenceEngine {
 
     #[allow(dead_code)]
     pub(crate) fn tokenizer(&self) -> Arc<Mutex<Tokenizer>> {
-        self.tokenizer.clone()
+        self.model.tokenizer()
     }
 
     #[allow(dead_code)]
@@ -52,6 +70,7 @@ impl InferenceEngine {
         self.model.is_cpu_device()
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::InferenceEngine;
@@ -74,10 +93,10 @@ mod tests {
     }
 
     #[test]
-    fn initializes_with_non_empty_model_bytes() {
+    fn injected_mock_synthesizes_with_non_empty_model_bytes() {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
 
-        let mut engine = InferenceEngine::new(&config).expect("should initialize");
+        let mut engine = InferenceEngine::mock(config.model_bytes).expect("should initialize");
 
         assert_eq!(engine.model_size(), 5);
 
@@ -91,7 +110,7 @@ mod tests {
     fn synthesize_rejects_empty_prompt() {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
 
-        let mut engine = InferenceEngine::new(&config).expect("should initialize");
+        let mut engine = InferenceEngine::mock(config.model_bytes).expect("should initialize");
 
         let error = engine
             .synthesize("   ")
@@ -110,7 +129,7 @@ mod tests {
     fn synthesize_maps_candle_error() {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
 
-        let mut engine = InferenceEngine::new(&config).expect("should initialize");
+        let mut engine = InferenceEngine::mock(config.model_bytes).expect("should initialize");
 
         let error = engine
             .synthesize("raise")
@@ -126,33 +145,10 @@ mod tests {
     }
 
     #[test]
-    fn synthesize_mock_latency_is_bounded() {
-        let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-
-        let mut engine = InferenceEngine::new(&config).expect("should initialize");
-
-        let start = std::time::Instant::now();
-        let output = engine
-            .synthesize("latency measurement prompt")
-            .expect("should synthesize");
-        let elapsed = start.elapsed();
-
-        eprintln!("mock_synthesize_latency_ns={}", elapsed.as_nanos());
-
-        assert!(
-            elapsed <= std::time::Duration::from_millis(5),
-            "mock synthesize latency {:?} exceeded 5ms budget",
-            elapsed
-        );
-
-        assert!(output.contains("latency measurement"));
-    }
-
-    #[test]
     fn tokenizer_is_shared_across_threads() {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
 
-        let engine = InferenceEngine::new(&config).expect("should initialize");
+        let engine = InferenceEngine::mock(config.model_bytes).expect("should initialize");
         let tokenizer = engine.tokenizer();
 
         let handles = (0..4)
@@ -174,7 +170,7 @@ mod tests {
     fn constructor_forces_cpu_device() {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
 
-        let engine = InferenceEngine::new(&config).expect("should initialize");
+        let engine = InferenceEngine::mock(config.model_bytes).expect("should initialize");
 
         assert!(engine.is_cpu_device());
     }

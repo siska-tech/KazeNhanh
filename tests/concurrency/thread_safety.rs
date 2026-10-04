@@ -14,7 +14,7 @@ const THREAD_COUNT: usize = 8;
 
 fn test_engine() -> KazeNhanhEngine {
     let config = common::nlp_config();
-    KazeNhanhEngine::new(config).expect("engine should initialize")
+    kaze_nhanh::test_support::mock_engine(config).expect("engine should initialize")
 }
 
 #[test]

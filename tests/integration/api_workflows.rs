@@ -12,7 +12,8 @@ use tempfile::TempDir;
 
 fn test_engine() -> KazeNhanhEngine {
     let config = common::nlp_config();
-    KazeNhanhEngine::new(config).expect("engine should initialize with mock assets")
+    kaze_nhanh::test_support::mock_engine(config)
+        .expect("engine should initialize with mock assets")
 }
 
 #[test]

@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 [CmdletBinding()]
 param([switch]$Offline)
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -12,7 +12,9 @@ try {
     if ($Offline) { $networkArgs += '--offline' }
     Invoke-KazeCargo -CargoArguments @('fmt', '--all', '--', '--check')
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--lib') + $networkArgs)
-    # This integration target links the non-cfg(test), non-mock library.
+    # Unit tests compile the production backend and inject mocks explicitly.
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--lib') + $networkArgs)
+    # The public constructor always uses the production backend.
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'nlp_resources') + $networkArgs)
     $expected = @{
         api_workflows = @('git_report_includes_markdown_additions', 'git_native_rag_synthesizes_summary_for_changes', 'summarize_with_details_returns_sentences_and_summary')

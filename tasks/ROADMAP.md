@@ -4,6 +4,8 @@
 
 2026-10-04: [再設計監査・計画](../docs/KZN-REDESIGN-PLAN-001.md)を作成。[監査タスク](task-redesign-001-text-evaluation-audit.md)はcompleted、[移行タスク](task-redesign-002-text-evaluation-migration.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0に着手。P1〜P5は未着手。以下の9件・44件は旧Git/要約機能の履歴であり、新基盤の進捗や検証済み品質を示しません。
 
+P0継続: 明示fake注入、tokenizer検証、合成GGUFでのCPU forwardを実装。学習済みモデル資産・remote CI検証は残作業。
+
 ## 旧Git・要約機能のタスク記録
 完了タスク件数 / 総タスク件数 : 9 / 9
 完了サブタスク件数 / 総サブタスク件数 : 44 / 44 （進捗率: 100%）

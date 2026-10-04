@@ -257,7 +257,8 @@ mod tests {
 
     fn inference_engine() -> Arc<Mutex<InferenceEngine>> {
         let config = EngineConfig::new(b"model-bytes", b"dict", br#"{}"#);
-        let engine = InferenceEngine::new(&config).expect("inference engine initializes");
+        let engine =
+            InferenceEngine::mock(config.model_bytes).expect("inference engine initializes");
         Arc::new(Mutex::new(engine))
     }
 

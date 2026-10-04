@@ -48,3 +48,15 @@ online初回セットアップ、offline再セットアップ、PowerShell構文
 ### 残作業と限界
 
 P0はprogressを維持する。CI/TSanは設定変更のみでremote実行未確認。実GGUFによる推論精度・速度・tokenizer互換性は未検証。cfg(test)の暗黙モック置換の撤去、fake注入、tokenizerの危険なfallback除去、real-model fixtureは後続作業。MSVCリンク時の既存LIBCMT競合警告とsince_time dead-code警告は残る。
+## P0 継続作業（2026-10-04）
+
+- [x] cfg(test)/mock_inferenceによる本番runtimeの置換を撤去。InferenceBackend traitでfakeを明示注入
+- [x] 通常コンストラクタはfeatureに関係なく本番モデルをロード
+- [x] 完全tokenizer JSONを渡すnew_with_tokenizer APIを追加。全語彙ID・embedding行数・EOS・architectureを検証
+- [x] tokenizer欠落時のPAD/UNKフォールバック、GGUF token配列のJSON誤解釈を除去
+- [x] 合成量子化GGUFで実CPU forward、繰り返しKV初期化、EOS停止、context超過拒否を確認
+- [x] モック5msのlatency試験を削除し、最終decodeとcontext予算を修正
+- [x] ローカル学習済みモデル向け参照token ID・生成・再現性の検証runnerとPowerShell入口を追加
+
+学習済みGGUF資産の選定・参照ID照合とremote CI/TSan実行は引き続き必要。合成GGUFの成功を言語品質検証へ読み替えず、P0はprogressを維持する。
+継続作業の検証: verify.ps1 -Offline成功。default unit 71件、実辞書/本番拒否3件、feature構成80件（unit71・workflow3・NLP3・並行性2・doctest1）成功。inference_smoke exampleのcargo checkも成功。

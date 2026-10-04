@@ -105,6 +105,7 @@ Sudachi 辞書はライセンスの都合で同梱していません。利用時
 - `docs/` : 詳細設計や利用ガイド
 
 ## 開発進捗
+- 2026-10-04: P0継続。推論backendを明示注入へ変更し、tokenizer資産の不一致を拒否。合成量子化GGUFで本番CPU経路を検証。[推論手順](docs/inference_engine.md)。
 - 2026-10-04: [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)を起票し、P0に着手。セットアップとテスト登録を整備し、Windowsで実辞書・結合・並行性テストが成功。[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md)。
 - 2026-10-04: [テキスト妥当性評価基盤への再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)を作成。実装は未着手。既存の結合テスト登録・実モデル検証に課題があり、旧来の品質表記は同計画の監査結果と併せて参照してください。
 - 2025-11-08: ThreadSanitizer ジョブのテストフィルタを修正し、並行性テスト実行を安定化。

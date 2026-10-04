@@ -1,4 +1,4 @@
-﻿mod common;
+mod common;
 
 use kaze_nhanh::foundation::nlp::NlpService;
 
@@ -36,7 +36,6 @@ fn real_dictionary_can_handle_unknown_characters() {
     }
 }
 
-#[cfg(not(feature = "mock_inference"))]
 #[test]
 fn production_engine_rejects_non_gguf_model() {
     // If this target accidentally links the mock runtime, construction succeeds.

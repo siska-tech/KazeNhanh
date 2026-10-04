@@ -258,7 +258,7 @@ mod tests {
         };
 
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-        let inference = Arc::new(Mutex::new(InferenceEngine::new(&config)?));
+        let inference = Arc::new(Mutex::new(InferenceEngine::mock(config.model_bytes)?));
         let rag = GitNativeRAG::new(inference);
 
         let result = rag.ingest_diffs(&options)?;
@@ -297,7 +297,7 @@ mod tests {
         };
 
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-        let inference = Arc::new(Mutex::new(InferenceEngine::new(&config)?));
+        let inference = Arc::new(Mutex::new(InferenceEngine::mock(config.model_bytes)?));
         let rag = GitNativeRAG::new(inference);
 
         let result = rag.ingest_diffs(&options)?;
@@ -322,7 +322,7 @@ mod tests {
         };
 
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-        let inference = Arc::new(Mutex::new(InferenceEngine::new(&config)?));
+        let inference = Arc::new(Mutex::new(InferenceEngine::mock(config.model_bytes)?));
         let rag = GitNativeRAG::new(inference);
 
         let report = rag.execute(&options)?;
@@ -368,7 +368,7 @@ mod tests {
         };
 
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-        let inference = Arc::new(Mutex::new(InferenceEngine::new(&config)?));
+        let inference = Arc::new(Mutex::new(InferenceEngine::mock(config.model_bytes)?));
         let rag = GitNativeRAG::new(inference);
 
         let report = rag.execute(&options)?;

@@ -103,7 +103,21 @@ impl KazeNhanhEngine {
             .map_err(|source| KazeNhanhError::DictionaryLoadError { source })?;
 
         let inference_engine = InferenceEngine::new(&config)?;
+        Ok(Self::from_services(nlp_service, inference_engine))
+    }
 
+    /// Loads a complete tokenizer JSON explicitly and validates its IDs against GGUF.
+    pub fn new_with_tokenizer(
+        config: EngineConfig,
+        tokenizer_bytes: &[u8],
+    ) -> Result<Self, KazeNhanhError> {
+        let nlp_service = NlpService::new(&config)
+            .map_err(|source| KazeNhanhError::DictionaryLoadError { source })?;
+        let inference_engine = InferenceEngine::new_with_tokenizer(&config, Some(tokenizer_bytes))?;
+        Ok(Self::from_services(nlp_service, inference_engine))
+    }
+
+    fn from_services(nlp_service: NlpService, inference_engine: InferenceEngine) -> Self {
         let nlp_service = Arc::new(nlp_service);
         let inference_engine = Arc::new(Mutex::new(inference_engine));
         let tokenizer: Arc<dyn pipeline::SentenceTokenizer + Send + Sync> = nlp_service.clone();
@@ -112,12 +126,12 @@ impl KazeNhanhEngine {
             HybridSummarizer::new(tokenizer, inference_engine.clone(), hybrid_config);
         let git_native_rag = GitNativeRAG::new(inference_engine.clone());
 
-        Ok(Self {
+        Self {
             inference_engine,
             nlp_service,
             hybrid_summarizer,
             git_native_rag,
-        })
+        }
     }
 
     /// Generates a Git activity report based on Markdown additions within the requested window.
@@ -257,6 +271,22 @@ impl KazeNhanhEngine {
     }
 }
 
+/// Explicit fake inference support for workflow tests; NLP still uses a real dictionary.
+#[cfg(feature = "mock_inference")]
+pub mod test_support {
+    use crate::{
+        foundation::nlp::NlpService, inference::InferenceEngine, EngineConfig, KazeNhanhEngine,
+        KazeNhanhError,
+    };
+
+    pub fn mock_engine(config: EngineConfig) -> Result<KazeNhanhEngine, KazeNhanhError> {
+        let nlp = NlpService::new(&config)
+            .map_err(|source| KazeNhanhError::DictionaryLoadError { source })?;
+        let inference = InferenceEngine::mock(config.model_bytes)?;
+        Ok(KazeNhanhEngine::from_services(nlp, inference))
+    }
+}
+
 #[cfg(feature = "mock_inference")]
 pub mod bench_support {
     use std::sync::{Arc, Mutex};
@@ -309,7 +339,7 @@ pub mod bench_support {
 
     fn inference_engine() -> Result<InferenceEngine, KazeNhanhError> {
         let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-        InferenceEngine::new(&config)
+        InferenceEngine::mock(config.model_bytes)
     }
 
     fn summarizer() -> Result<HybridSummarizer, KazeNhanhError> {

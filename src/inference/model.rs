@@ -1,375 +1,139 @@
-#[cfg(not(any(test, feature = "mock_inference")))]
-mod runtime {
-    use std::fmt;
-    use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
-    use candle_core::{Device, Error as CandleError, Result as CandleResult, Tensor};
-    use candle_transformers::generation::LogitsProcessor;
-    use candle_transformers::models::quantized_llama::ModelWeights;
-    use tokenizers::Tokenizer;
-    use tracing::warn;
+use candle_core::{Device, Error, Result, Tensor};
+use candle_transformers::generation::LogitsProcessor;
+use candle_transformers::models::quantized_llama::ModelWeights;
+use tokenizers::Tokenizer;
 
-    use super::tokenizer_support::{detect_eos_token_id, load_tokenizer};
+use super::tokenizer::{detect_eos_token_id, load_tokenizer};
+use super::InferenceBackend;
 
-    const DEFAULT_MAX_CONTEXT_TOKENS: usize = 2048;
-    const DEFAULT_MAX_NEW_TOKENS: usize = 128;
-    const DEFAULT_SAMPLING_SEED: u64 = 42;
-    const DEFAULT_TEMPERATURE: f64 = 0.8;
-    const DEFAULT_TOP_P: f64 = 0.95;
+pub(crate) struct KazeModel {
+    device: Device,
+    base_weights: ModelWeights,
+    tokenizer: Arc<Mutex<Tokenizer>>,
+    model_bytes_len: usize,
+    max_context_tokens: usize,
+    max_new_tokens: usize,
+    eos_token_id: Option<u32>,
+}
 
-    #[derive(Clone)]
-    pub(crate) struct KazeModel {
-        device: Device,
-        base_weights: ModelWeights,
-        tokenizer: Arc<Mutex<Tokenizer>>,
-        model_bytes_len: usize,
-        max_context_tokens: usize,
-        max_new_tokens: usize,
-        sampling_seed: u64,
-        temperature: Option<f64>,
-        top_p: Option<f64>,
-        eos_token_id: Option<u32>,
-    }
-
-    impl KazeModel {
-        pub(crate) fn load(bytes: &[u8]) -> CandleResult<Self> {
-            if bytes.is_empty() {
-                return Err(CandleError::Msg("model bytes are empty".into()));
-            }
-
-            let model_bytes_len = bytes.len();
-            let device = Device::Cpu;
-            let mut cursor = std::io::Cursor::new(bytes);
-            let content = candle_core::quantized::gguf_file::Content::read(&mut cursor)?;
-            let tokenizer = Arc::new(Mutex::new(load_tokenizer(&content.metadata)?));
-            let eos_token_id = detect_eos_token_id(&content.metadata, &tokenizer)?;
-
-            let mut reader = &mut cursor;
-            let model = ModelWeights::from_gguf(content, &mut reader, &device)?;
-
-            Ok(Self {
-                device,
-                base_weights: model,
-                tokenizer,
-                model_bytes_len,
-                max_context_tokens: DEFAULT_MAX_CONTEXT_TOKENS,
-                max_new_tokens: DEFAULT_MAX_NEW_TOKENS,
-                sampling_seed: DEFAULT_SAMPLING_SEED,
-                temperature: Some(DEFAULT_TEMPERATURE),
-                top_p: Some(DEFAULT_TOP_P),
-                eos_token_id,
-            })
+impl KazeModel {
+    pub(crate) fn load(bytes: &[u8], tokenizer_bytes: Option<&[u8]>) -> Result<Self> {
+        if bytes.is_empty() {
+            return Err(Error::Msg("model bytes are empty".into()));
         }
-
-        pub(crate) fn ensure_cpu_device(&self) -> CandleResult<()> {
-            if matches!(self.device, Device::Cpu) {
-                Ok(())
-            } else {
-                Err(stage_error(
-                    "device",
-                    "only cpu inference is supported for quantized models",
+        let device = Device::Cpu;
+        let mut cursor = std::io::Cursor::new(bytes);
+        let content = candle_core::quantized::gguf_file::Content::read(&mut cursor)?;
+        match content.metadata.get("general.architecture") {
+            Some(candle_core::quantized::gguf_file::Value::String(architecture))
+                if architecture == "llama" => {}
+            _ => {
+                return Err(Error::Msg(
+                    "only the llama GGUF architecture is supported by this backend".into(),
                 ))
             }
         }
-
-        pub(crate) fn is_cpu_device(&self) -> bool {
-            matches!(self.device, Device::Cpu)
+        let context_limit = match content.metadata.get("llama.context_length") {
+            Some(value) => value.to_u32()? as usize,
+            None => 2048,
         }
-
-        pub(crate) fn synthesize(&mut self, prompt: &str) -> CandleResult<String> {
-            let trimmed_prompt = prompt.trim();
-            if trimmed_prompt.is_empty() {
-                return Err(stage_error("prompt", "prompt is empty"));
-            }
-
-            let tokenizer_guard = self.lock_tokenizer()?;
-
-            let encoding = tokenizer_guard
-                .encode(trimmed_prompt, true)
-                .map_err(|err| stage_error("tokenizer encode", err))?;
-            let mut all_tokens = encoding.get_ids().to_vec();
-            let prompt_token_count = all_tokens.len();
-            let mut generated_tokens = Vec::new();
-            let mut streamed_text = String::new();
-            let mut last_decoded_len = 0usize;
-            let mut decode_error_logged = false;
-
-            if all_tokens.is_empty() {
-                return Ok(String::new());
-            }
-
-            // Maintain a sliding window for KV cache context.
-            let mut context_tokens = if all_tokens.len() > self.max_context_tokens {
-                all_tokens
-                    .iter()
-                    .skip(all_tokens.len() - self.max_context_tokens)
-                    .copied()
-                    .collect::<Vec<_>>()
-            } else {
-                all_tokens.clone()
-            };
-
-            let mut model = self.base_weights.clone();
-            let mut logits_processor =
-                LogitsProcessor::new(self.sampling_seed, self.temperature, self.top_p);
-            drop(tokenizer_guard);
-
-            for step in 0..self.max_new_tokens {
-                let input_slice = if step == 0 {
-                    context_tokens.as_slice()
-                } else {
-                    let len = context_tokens.len();
-                    &context_tokens[len - 1..]
-                };
-
-                let index_pos = all_tokens.len().saturating_sub(input_slice.len());
-
-                let token_tensor = Tensor::new(input_slice, &self.device)
-                    .map_err(|err| stage_error("tensor init", err))?
-                    .unsqueeze(0)
-                    .map_err(|err| stage_error("tensor expand", err))?;
-                let logits = model
-                    .forward(&token_tensor, index_pos)
-                    .map_err(|err| stage_error("model forward", err))?
-                    .squeeze(0)
-                    .map_err(|err| stage_error("logits squeeze", err))?;
-                let next_token = logits_processor
-                    .sample(&logits)
-                    .map_err(|err| stage_error("logits sampling", err))?;
-
-                if self.eos_token_id == Some(next_token) {
-                    break;
-                }
-
-                all_tokens.push(next_token);
-                context_tokens.push(next_token);
-                generated_tokens.push(next_token);
-
-                if context_tokens.len() > self.max_context_tokens {
-                    let overflow = context_tokens.len() - self.max_context_tokens;
-                    context_tokens.drain(0..overflow);
-                }
-
-                let tokenizer_guard = self.lock_tokenizer()?;
-                let decode_result = tokenizer_guard.decode(&generated_tokens, true);
-                drop(tokenizer_guard);
-
-                match decode_result {
-                    Ok(decoded) => {
-                        if decoded.len() > last_decoded_len {
-                            if let Some(new_segment) = decoded.get(last_decoded_len..) {
-                                streamed_text.push_str(new_segment);
-                                last_decoded_len = decoded.len();
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        if !decode_error_logged {
-                            warn!(target: "kaze_nhanh::inference", %err, "streaming decode failed; continuing");
-                            decode_error_logged = true;
-                        }
-                    }
-                }
-            }
-
-            let tokenizer_guard = self.lock_tokenizer()?;
-
-            let output_tokens = &all_tokens[prompt_token_count..];
-            if output_tokens.is_empty() {
-                return Ok(String::new());
-            }
-
-            let decoded = tokenizer_guard
-                .decode(output_tokens, true)
-                .map_err(|err| stage_error("tokenizer decode", err))?;
-
-            if decoded.len() > last_decoded_len {
-                if let Some(new_segment) = decoded.get(last_decoded_len..) {
-                    streamed_text.push_str(new_segment);
-                }
-            }
-
-            Ok(streamed_text.trim().to_string())
+        .min(2048);
+        if context_limit < 2 {
+            return Err(Error::Msg(
+                "GGUF context length must allow prompt and output tokens".into(),
+            ));
         }
-
-        pub(crate) fn tokenizer(&self) -> Arc<Mutex<Tokenizer>> {
-            self.tokenizer.clone()
+        let tokenizer = load_tokenizer(&content.metadata, tokenizer_bytes)?;
+        let embedding = content
+            .tensor_infos
+            .get("token_embd.weight")
+            .ok_or_else(|| Error::Msg("GGUF token_embd.weight is missing".into()))?;
+        let vocab_size = tokenizer.get_vocab_size(true);
+        if embedding.shape.dims().len() != 2 || embedding.shape.dims()[0] != vocab_size {
+            return Err(Error::Msg(
+                "GGUF embedding rows do not match the tokenizer vocabulary".into(),
+            ));
         }
-
-        pub(crate) fn model_size(&self) -> usize {
-            self.model_bytes_len
-        }
-
-        fn lock_tokenizer(&self) -> CandleResult<MutexGuard<'_, Tokenizer>> {
-            self.tokenizer
-                .lock()
-                .map_err(|_| stage_error("tokenizer lock", "mutex poisoned"))
-        }
-    }
-
-    fn stage_error(stage: &str, err: impl fmt::Display) -> CandleError {
-        CandleError::Msg(format!("synthesis {stage} error: {err}"))
+        let tokenizer = Arc::new(Mutex::new(tokenizer));
+        let eos_token_id = detect_eos_token_id(&content.metadata, &tokenizer)?;
+        let weights = ModelWeights::from_gguf(content, &mut cursor, &device)?;
+        Ok(Self {
+            device,
+            base_weights: weights,
+            tokenizer,
+            model_bytes_len: bytes.len(),
+            max_context_tokens: context_limit,
+            max_new_tokens: 128,
+            eos_token_id,
+        })
     }
 }
 
-#[cfg(not(any(test, feature = "mock_inference")))]
-pub(crate) use runtime::KazeModel;
-
-mod tokenizer_support {
-    use std::collections::HashMap;
-    use std::sync::{Arc, Mutex};
-
-    use candle_core::quantized::gguf_file;
-    use candle_core::{Error as CandleError, Result as CandleResult};
-    use tokenizers::models::wordlevel::WordLevelBuilder;
-    use tokenizers::pre_tokenizers::whitespace::Whitespace;
-    use tokenizers::Tokenizer;
-
-    pub(crate) fn load_tokenizer(
-        metadata: &HashMap<String, gguf_file::Value>,
-    ) -> CandleResult<Tokenizer> {
-        if let Some(bytes) = find_tokenizer_bytes(metadata) {
-            return Tokenizer::from_bytes(&bytes)
-                .map_err(|err| CandleError::Msg(format!("failed to restore tokenizer: {err}")));
+impl InferenceBackend for KazeModel {
+    fn synthesize(&mut self, prompt: &str) -> Result<String> {
+        let prompt = prompt.trim();
+        if prompt.is_empty() {
+            return Err(Error::Msg("synthesis prompt is empty".into()));
         }
-
-        build_fallback_tokenizer()
-    }
-
-    #[cfg_attr(test, allow(dead_code))]
-    pub(crate) fn detect_eos_token_id(
-        metadata: &HashMap<String, gguf_file::Value>,
-        tokenizer: &Arc<Mutex<Tokenizer>>,
-    ) -> CandleResult<Option<u32>> {
-        if let Some(value) = metadata.get("tokenizer.ggml.eos_token_id") {
-            if let Ok(id) = value.to_u32() {
-                return Ok(Some(id));
-            }
-        }
-
-        if let Some(value) = metadata.get("tokenizer.ggml.eos_token") {
-            if let gguf_file::Value::String(token) = value {
-                if let Some(id) = lookup_token_id(tokenizer, token)? {
-                    return Ok(Some(id));
-                }
-            }
-        }
-
-        for candidate in ["</s>", "<|eot_id|>", "<|endoftext|>"] {
-            if let Some(id) = lookup_token_id(tokenizer, candidate)? {
-                return Ok(Some(id));
-            }
-        }
-
-        Ok(None)
-    }
-
-    #[cfg_attr(test, allow(dead_code))]
-    fn lookup_token_id(
-        tokenizer: &Arc<Mutex<Tokenizer>>,
-        token: &str,
-    ) -> CandleResult<Option<u32>> {
-        let guard = tokenizer
+        let mut all_tokens = self
+            .tokenizer
             .lock()
-            .map_err(|_| CandleError::Msg("failed to lock tokenizer".into()))?;
-        Ok(guard.get_vocab(true).get(token).copied())
-    }
-
-    fn find_tokenizer_bytes(metadata: &HashMap<String, gguf_file::Value>) -> Option<Vec<u8>> {
-        for key in ["tokenizer.json", "tokenizer.ggml.tokens"] {
-            if let Some(value) = metadata.get(key) {
-                if let Some(bytes) = value_to_bytes(value) {
-                    return Some(bytes);
-                }
+            .map_err(|_| Error::Msg("tokenizer mutex poisoned".into()))?
+            .encode(prompt, true)
+            .map_err(|err| Error::Msg(format!("tokenizer encode error: {err}")))?
+            .get_ids()
+            .to_vec();
+        if all_tokens.is_empty() {
+            return Err(Error::Msg("tokenizer produced an empty prompt".into()));
+        }
+        if all_tokens.len() >= self.max_context_tokens {
+            return Err(Error::Msg(format!(
+                "prompt exceeds context budget ({} tokens; limit {})",
+                all_tokens.len(),
+                self.max_context_tokens
+            )));
+        }
+        let prompt_len = all_tokens.len();
+        let generation_budget = self
+            .max_new_tokens
+            .min(self.max_context_tokens - prompt_len);
+        // Clone pristine weights so each request starts with an empty KV cache.
+        let mut model = self.base_weights.clone();
+        let mut sampler = LogitsProcessor::new(42, Some(0.8), Some(0.95));
+        for step in 0..generation_budget {
+            let input = if step == 0 {
+                all_tokens.as_slice()
+            } else {
+                &all_tokens[all_tokens.len() - 1..]
+            };
+            let index_pos = all_tokens.len() - input.len();
+            let tensor = Tensor::new(input, &self.device)?.unsqueeze(0)?;
+            let logits = model.forward(&tensor, index_pos)?.squeeze(0)?;
+            let next = sampler.sample(&logits)?;
+            if Some(next) == self.eos_token_id {
+                break;
             }
+            all_tokens.push(next);
         }
-        None
+        // Decode once: decoded prefixes are not guaranteed to be append-only.
+        self.tokenizer
+            .lock()
+            .map_err(|_| Error::Msg("tokenizer mutex poisoned".into()))?
+            .decode(&all_tokens[prompt_len..], true)
+            .map(|text| text.trim().to_string())
+            .map_err(|err| Error::Msg(format!("tokenizer decode error: {err}")))
     }
 
-    fn value_to_bytes(value: &gguf_file::Value) -> Option<Vec<u8>> {
-        match value {
-            gguf_file::Value::String(s) => Some(s.as_bytes().to_vec()),
-            gguf_file::Value::Array(values) => {
-                let mut bytes = Vec::with_capacity(values.len());
-                for value in values {
-                    match value {
-                        gguf_file::Value::U8(v) => bytes.push(*v),
-                        gguf_file::Value::I8(v) => bytes.push(*v as u8),
-                        _ => return None,
-                    }
-                }
-                Some(bytes)
-            }
-            _ => None,
-        }
+    fn tokenizer(&self) -> Arc<Mutex<Tokenizer>> {
+        self.tokenizer.clone()
     }
-
-    fn build_fallback_tokenizer() -> CandleResult<Tokenizer> {
-        let mut vocab = HashMap::new();
-        vocab.insert("[PAD]".to_string(), 0);
-        vocab.insert("[UNK]".to_string(), 1);
-
-        let model = WordLevelBuilder::default()
-            .vocab(vocab)
-            .unk_token("[UNK]".to_string())
-            .build()
-            .map_err(|err| {
-                CandleError::Msg(format!("failed to build fallback tokenizer: {err}"))
-            })?;
-
-        let mut tokenizer = Tokenizer::new(model);
-        tokenizer.with_pre_tokenizer(Whitespace::default());
-        Ok(tokenizer)
+    fn model_size(&self) -> usize {
+        self.model_bytes_len
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use std::sync::{Arc, Mutex};
-
-        fn assert_send_sync<T: Send + Sync>() {}
-
-        #[test]
-        fn load_tokenizer_returns_fallback_when_metadata_missing() {
-            let metadata = HashMap::new();
-
-            let tokenizer = load_tokenizer(&metadata).expect("fallback tokenizer should build");
-            let encoding = tokenizer
-                .encode("hello world", false)
-                .expect("encoding should succeed");
-
-            assert!(!encoding.get_ids().is_empty());
-        }
-
-        #[test]
-        fn find_tokenizer_bytes_reads_string_and_arrays() {
-            let mut metadata = HashMap::new();
-            metadata.insert(
-                "tokenizer.json".to_string(),
-                gguf_file::Value::String("{\"dummy\":true}".to_string()),
-            );
-
-            let bytes = find_tokenizer_bytes(&metadata).expect("should extract string bytes");
-            assert_eq!(bytes, b"{\"dummy\":true}");
-
-            let mut metadata = HashMap::new();
-            metadata.insert(
-                "tokenizer.ggml.tokens".to_string(),
-                gguf_file::Value::Array(vec![
-                    gguf_file::Value::U8(b'a'),
-                    gguf_file::Value::U8(b'b'),
-                    gguf_file::Value::U8(b'c'),
-                ]),
-            );
-
-            let bytes = find_tokenizer_bytes(&metadata).expect("should read byte array");
-            assert_eq!(bytes, b"abc");
-        }
-
-        #[test]
-        fn arc_mutex_tokenizer_is_send_and_sync() {
-            assert_send_sync::<Arc<Mutex<Tokenizer>>>();
-        }
+    fn is_cpu_device(&self) -> bool {
+        matches!(self.device, Device::Cpu)
     }
 }
 
@@ -384,12 +148,12 @@ mod runtime_mock {
     use tokenizers::Tokenizer;
 
     #[derive(Clone)]
-    pub(crate) struct KazeModel {
+    pub(crate) struct MockModel {
         tokenizer: Arc<Mutex<Tokenizer>>,
         model_bytes_len: usize,
     }
 
-    impl KazeModel {
+    impl MockModel {
         pub(crate) fn load(bytes: &[u8]) -> Result<Self, CandleError> {
             if bytes.is_empty() {
                 return Err(CandleError::Msg("model bytes are empty".into()));
@@ -401,10 +165,6 @@ mod runtime_mock {
                 tokenizer,
                 model_bytes_len: bytes.len(),
             })
-        }
-
-        pub(crate) fn ensure_cpu_device(&self) -> Result<(), CandleError> {
-            Ok(())
         }
 
         pub(crate) fn is_cpu_device(&self) -> bool {
@@ -448,4 +208,146 @@ mod runtime_mock {
 }
 
 #[cfg(any(test, feature = "mock_inference"))]
-pub(crate) use runtime_mock::KazeModel;
+pub(crate) use runtime_mock::MockModel;
+
+#[cfg(any(test, feature = "mock_inference"))]
+impl InferenceBackend for MockModel {
+    fn synthesize(&mut self, prompt: &str) -> Result<String> {
+        MockModel::synthesize(self, prompt)
+    }
+    fn tokenizer(&self) -> Arc<Mutex<Tokenizer>> {
+        MockModel::tokenizer(self)
+    }
+    fn model_size(&self) -> usize {
+        MockModel::model_size(self)
+    }
+    fn is_cpu_device(&self) -> bool {
+        MockModel::is_cpu_device(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_core::quantized::{gguf_file, GgmlDType, QTensor};
+    use candle_core::DType;
+
+    // Synthetic, one-layer LLaMA GGUF: it exercises real quantized CPU forward,
+    // KV cache, EOS and decode, but is not a trained language-quality benchmark.
+    fn fixture(architecture: &str, embedded_json: bool) -> (Vec<u8>, Vec<u8>) {
+        let (mut metadata, tokenizer) = super::super::tokenizer::tests::fixture();
+        use gguf_file::Value;
+        metadata.insert(
+            "general.architecture".into(),
+            Value::String(architecture.into()),
+        );
+        for (key, value) in [
+            ("llama.attention.head_count", 1),
+            ("llama.attention.head_count_kv", 1),
+            ("llama.block_count", 1),
+            ("llama.embedding_length", 32),
+            ("llama.rope.dimension_count", 32),
+        ] {
+            metadata.insert(key.into(), Value::U32(value));
+        }
+        metadata.insert(
+            "llama.attention.layer_norm_rms_epsilon".into(),
+            Value::F32(1e-5),
+        );
+        if embedded_json {
+            metadata.insert(
+                "tokenizer.json".into(),
+                Value::String(String::from_utf8(tokenizer.clone()).unwrap()),
+            );
+        }
+        let cpu = Device::Cpu;
+        let mut tensors: Vec<(String, QTensor)> = Vec::new();
+        let mut add = |name: &str, tensor: Tensor, dtype| {
+            tensors.push((name.to_string(), QTensor::quantize(&tensor, dtype).unwrap()));
+        };
+        add(
+            "token_embd.weight",
+            Tensor::ones((5, 32), DType::F32, &cpu).unwrap(),
+            GgmlDType::Q4_0,
+        );
+        add(
+            "output_norm.weight",
+            Tensor::ones(32, DType::F32, &cpu).unwrap(),
+            GgmlDType::F32,
+        );
+        let mut output = vec![0f32; 5 * 32];
+        output[3 * 32..4 * 32].fill(1.0);
+        add(
+            "output.weight",
+            Tensor::from_vec(output, (5, 32), &cpu).unwrap(),
+            GgmlDType::Q4_0,
+        );
+        for suffix in [
+            "attn_q",
+            "attn_k",
+            "attn_v",
+            "attn_output",
+            "ffn_gate",
+            "ffn_down",
+            "ffn_up",
+        ] {
+            add(
+                &format!("blk.0.{suffix}.weight"),
+                Tensor::zeros((32, 32), DType::F32, &cpu).unwrap(),
+                GgmlDType::Q4_0,
+            );
+        }
+        for suffix in ["attn_norm", "ffn_norm"] {
+            add(
+                &format!("blk.0.{suffix}.weight"),
+                Tensor::ones(32, DType::F32, &cpu).unwrap(),
+                GgmlDType::F32,
+            );
+        }
+        let metadata_refs = metadata
+            .iter()
+            .map(|(key, value)| (key.as_str(), value))
+            .collect::<Vec<_>>();
+        let tensor_refs = tensors
+            .iter()
+            .map(|(name, tensor)| (name.as_str(), tensor))
+            .collect::<Vec<_>>();
+        let mut file = std::io::Cursor::new(Vec::new());
+        gguf_file::write(&mut file, &metadata_refs, &tensor_refs).unwrap();
+        (file.into_inner(), tokenizer)
+    }
+
+    #[test]
+    fn quantized_cpu_forward_is_repeatable_with_fresh_kv_cache() {
+        let (bytes, tokenizer) = fixture("llama", false);
+        let mut model = KazeModel::load(&bytes, Some(&tokenizer)).unwrap();
+        model.max_new_tokens = 3;
+        assert!(model.is_cpu_device());
+        let first = model.synthesize("東京 自然。").unwrap();
+        assert_eq!(first, "自然 自然 自然");
+        assert_eq!(model.synthesize("東京 自然。").unwrap(), first);
+        model.eos_token_id = Some(3);
+        assert_eq!(model.synthesize("東京 自然。").unwrap(), "");
+    }
+
+    #[test]
+    fn prompt_and_generation_obey_context_budget_without_silent_truncation() {
+        let (bytes, _) = fixture("llama", true);
+        let mut model = KazeModel::load(&bytes, None).unwrap();
+        model.max_context_tokens = 4;
+        model.max_new_tokens = 128;
+        assert_eq!(model.synthesize("東京 自然。").unwrap(), "自然");
+        let error = model.synthesize("東京 東京 自然。").unwrap_err();
+        assert!(error.to_string().contains("context budget"));
+        assert_eq!(model.synthesize("東京 自然。").unwrap(), "自然");
+    }
+
+    #[test]
+    fn gguf_load_fails_for_missing_tokenizer_or_unsupported_architecture() {
+        let (bytes, tokenizer) = fixture("llama", false);
+        assert!(KazeModel::load(&bytes, None).is_err());
+        let (unsupported, _) = fixture("qwen2", false);
+        assert!(KazeModel::load(&unsupported, Some(&tokenizer)).is_err());
+        assert!(KazeModel::load(b"not gguf", Some(&tokenizer)).is_err());
+    }
+}

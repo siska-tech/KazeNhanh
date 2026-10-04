@@ -1,70 +1,78 @@
-# Inference Engine Usage & Benchmark Plan
+﻿# 推論エンジンの利用と検証
 
-## 概要
-- `KazeModel` は Candle の量子化 LLaMA ウェイトを GGUF 形式で読み込み、CPU 専用デバイス (`Device::Cpu`) で推論を行います。
-- `InferenceEngine` は `EngineConfig` に含まれる GGUF モデル・Sudachi 辞書・設定 JSON を受け取り、トークナイザー復元と推論ループを初期化します。
-- パブリック API からは `KazeNhanhEngine` を通じて推論を呼び出す設計になっており、内部で同一の `InferenceEngine` を共有します。
+2026-10-04、Issue #2/P0で本番runtimeとテストfixtureを分離した。
 
-## 利用手順
-1. GGUF モデルと Sudachi リソースを `include_bytes!` などで静的にバンドルし、`EngineConfig` を構築します。
-2. `KazeNhanhEngine::new` でエンジン全体を初期化し、`summarize_document` や `synthesize_summary` などの高レベルメソッドを呼び出します。
-3. スレッドから直接推論を行いたい場合は、`KazeNhanhEngine::lock_inference()` で `Arc<Mutex<InferenceEngine>>` を取得し、`synthesize` を呼び出します（内部 API 向け）。
+## 本番コンストラクタ
 
-```rust
+`KazeNhanhEngine::new(config)`はfeatureやcfg(test)に関わらず、本番のCandle CPU backendを使用する。モデルは`general.architecture = llama`のGGUFが対象。
+
+通常のGGUF語彙配列だけではtokenizerを完全に復元できないため、次のどちらかが必要:
+
+- `KazeNhanhEngine::new_with_tokenizer(config, tokenizer_json_bytes)`で完全なtokenizer JSONを渡す。
+- GGUFの`tokenizer.json`メタデータに完全なJSONを埋め、従来の`new(config)`を使う。
+
+`EngineConfig`の既存フィールドと`new`は維持する。外部tokenizerを追加する場合の例:
+
+```rust,ignore
 use kaze_nhanh::{EngineConfig, KazeNhanhEngine};
 
-const MODEL_BYTES: &[u8] = include_bytes!("../resources/llama-q4_0.gguf");
-const DICT_BYTES: &[u8] = include_bytes!("../resources/system.dic");
-const SETTINGS_BYTES: &[u8] = include_bytes!("../resources/sudachi.json");
+const MODEL: &[u8] = include_bytes!("../resources/model.gguf");
+const DICTIONARY: &[u8] = include_bytes!("../resources/sudachi/system.dic");
+const SETTINGS: &[u8] = include_bytes!("../resources/sudachi/sudachi.json");
+const TOKENIZER: &[u8] = include_bytes!("../resources/tokenizer.json");
 
-fn run_summary(prompt: &str) -> Result<String, kaze_nhanh::KazeNhanhError> {
-    let config = EngineConfig::new(MODEL_BYTES, DICT_BYTES, SETTINGS_BYTES);
-    let engine = KazeNhanhEngine::new(config)?;
-
-    engine.summarize_document(prompt)
-}
+let config = EngineConfig::new(MODEL, DICTIONARY, SETTINGS);
+let engine = KazeNhanhEngine::new_with_tokenizer(config, TOKENIZER)?;
+let output = engine.synthesize_summary(vec!["日本語の短い文章です。".into()])?;
 ```
 
-> **メモ:** `InferenceEngine` は crate 内部専用のため、外部アプリケーションは `KazeNhanhEngine` 経由で利用してください。独自パイプラインで内部 API を使う場合は `kaze_nhanh::inference` モジュールを参照してください。
+ロード時にJSONの全語彙IDと`tokenizer.ggml.tokens`を照合し、embedding行数、EOS ID/文字列、architectureを確認する。資産不足・不一致はModelLoadError。PAD/UNKだけのtokenizerへフォールバックしない。語彙照合だけでは正規化・pre-tokenization・chat templateの一致を証明できないため、学習済み資産では別途参照token ID試験が必要。
 
-## 構成とチューニング
-- **依存関係**: `candle-core`/`candle-nn`/`candle-transformers` は 0.9 系を使用し、`default-features = false` で CPU バックエンドのみを有効化しています。追加の GPU 機能が必要な場合は、`candle-core` の `cuda`/`metal` 等の feature を将来的に検討します。
-- **デバイス強制**: `KazeModel::ensure_cpu_device` により GGUF ロード直後に `Device::Cpu` が検証され、GPU など別デバイスが検出された場合は `ModelLoadError` にフォールバックします。`constructor_forces_cpu_device` テストで CPU スモークチェックを行っています。
-- **最大コンテキスト長**: 既定値は 2048 トークンで、プロンプトが超過した場合はスライディングウィンドウで切り詰めます。
-- **生成トークン数**: 既定値は 128 トークン。長文出力が必要な場合は将来的に設定値を読み出す API を追加する予定です。
-- **サンプリング**: `LogitsProcessor::new` により、固定シード (42)、温度 0.8、Top-p 0.95 を採用しています。外部設定対応は `KZN-ARC-DESIGN-001` のフェーズ 2 で扱います。
-- **EOS 検知**: GGUF メタデータ (`tokenizer.ggml.eos_token_id` など) を優先し、既知トークン (`</s>`, `<|eot_id|>`, `<|endoftext|>`) をフォールバックとして探索します。
-- **トークナイザー共有**: `Arc<Mutex<Tokenizer>>` でスレッド間共有し、ユニットテスト (`tokenizer_is_shared_across_threads`) でロック取得と並列エンコード動作を確認しています。
-- **ストリーミングデコード**: 推論ループ内で生成トークンを段階的に `tokenizer.decode(..., true)` に渡し、UTF-8 の途中断片を許容しながら `streamed_text` を構築します。生成終了時に差分を補完し、最終文字列を `trim()` した上で返却します。
-- **エラーステージ**: `stage_error()` ヘルパーでトークナイズ・テンソル初期化・モデル forward・サンプリング・デコードの各段階を特定し、`ModelLoadError`/`ModelInferenceError` に詳細メッセージを伝播します。デコード失敗は `tracing::warn!` で一度だけ通知し、最終デコードで再試行します。
+## 生成の境界
 
-## エラーハンドリング指針
-- モデルロード失敗時は `KazeNhanhError::ModelLoadError` に内包した `CandleError` を返し、詳細メッセージをログ出力します。
-- 推論エラー (`ModelWeights::forward`、トークナイズ失敗等) は `ModelInferenceError` にマッピングされます。
-- ミューテックス獲得失敗など内部的な一時エラーは `CandleError::Msg` に変換し、呼び出し元でリトライ戦略を選択できるようにしています。
+- CPUで固定seed 42、temperature 0.8、top-p 0.95。評価judge用の設定はP3で設計する。
+- context上限は2048とGGUFの`llama.context_length`（指定されていれば）の小さい方。
+- promptが上限以上ならエラー。先頭や参照文脈を黙って落とさない。
+- 最大128生成token、contextの残り予算でも制限する。EOSで停止する。
+- 呼出ごとに初期ウェイトをcloneして空のKV cacheから開始する。
+- 最終token列を一度decodeする。decode済みprefixが変わる場合の文字欠落を避ける。
 
-## ベンチマーク計画
-- **シナリオ**
-  - 短文要約プロンプト (<= 256 トークン)
-  - 中長文レポート生成 (<= 1024 トークン)
-  - Git 差分要約 (連続 diff チャンク)
-- **メトリクス**
-  - 1 リクエストあたりのレイテンシ (p50/p95)
-  - 生成トークン毎秒 (tokens/sec)
-  - プロンプトトークン長と生成トークン長のヒストグラム
-- **実行コマンド (暫定)**
-  - `cargo test synthesize_mock_latency_is_bounded -- --nocapture` (モック推論のヘルスチェック)
-  - `cargo bench --bench inference_loop` (将来 Criterion ベンチを追加予定)
+## 明示的なモック注入
 
-### 初期測定結果 (モック環境)
-- 測定日: 2025-11-07
-- 実行環境: Windows 11 (build 26100), Ryzen 7 7840HS, Rust 1.81.0 `test` プロファイル
-- コマンド: `cargo test synthesize_mock_latency_is_bounded -- --nocapture`
-- 結果: `mock_synthesize_latency_ns=17800` (約 0.018 ms) — モックモデルのため IO や行列演算は未実行
-- 観察: ミューテックス・トークナイズを含めた基本フローは 5ms を大きく下回り、CPU バウンド処理のオーバーヘッドは無視できる水準。実際の GGUF を用いた測定では KV キャッシュの初期化コストが支配的になる見込み。
+内部のInferenceBackend traitをInferenceEngineへ注入する。テスト内のfake生成は`InferenceEngine::mock`、外部workflow fixtureは`mock_inference` featureで公開される`test_support::mock_engine`を使う。
 
-### 次のアクション
-- GGUF 実ファイルを含む評価用バンドルを作成し、Criterion ベンチマーク (`benches/inference.rs`) を追加。
-- トークン制限や温度パラメータを `EngineConfig` から外部設定できるよう API を拡張。
-- Windows と Linux の双方で同一プロンプトセットを測定し、CPU 固有最適化 (AVX/AVX2) の影響を把握。
+`mock_inference`はfixture APIを追加するだけで、通常のコンストラクタをモックへ切り替えない。feature有効時にも、本番の無効GGUF拒否・合成GGUFによる量子化CPU forward試験を実行する。
 
+## 自動試験の範囲
+
+- 合成された小さな1-layer LLaMA GGUFで、実際の量子化CPU forward・KV cache・EOS・decode・context上限を確認。
+- 日本語の参照token ID、語彙サイズ/型/ID不一致、欠落JSON、EOS不一致を確認。
+- Git/要約workflowは明示fakeで実行。実辞書を使うNLPは別targetでも実行。
+
+合成GGUFは学習済みSLMではない。生成の言語品質や実用モデルのCPU性能を示すものではなく、従来のモックlatency試験も削除した。
+
+## 学習済みローカル資産の任意検証
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify-model.ps1 `
+  -ModelPath C:\models\model.gguf `
+  -TokenizerPath C:\models\tokenizer.json `
+  -ReferenceCasesPath C:\models\reference-cases.json `
+  -Offline
+```
+
+参照caseはJSON配列で、以下の形。expected_idsは、元モデルの公式tokenizer/信頼できる参照実装から`add_special_tokens=true`で取得したものを使う。この例のIDは形式説明用であり実モデルの正解ではない。
+
+```json
+[
+  {
+    "text": "東京都で自然な日本語を解析します。",
+    "expected_ids": [1, 100, 200],
+    "prompt": "モデル固有のchat templateを適用した日本語prompt"
+  }
+]
+```
+
+runnerは資産SHA256を表示し、参照ID照合、本番ロード、生成が空でないこと、同じpromptの再実行で同じ出力が得られることを確認。出力と各推論の時間をJSON行として標準出力へ返す。モデルやtokenizerの自動取得はしない。
+
+このrunnerは言語品質の自動合否・p95/RSS計測を含まない。学習済み資産がまだ選定されていないため、今回のPCではその検証を実行していない。ライフタイムがstaticの旧EngineConfigへ合わせ、CLIの資産bytesはプロセス終了まで保持する。owned資産への移行はP1で扱う。
