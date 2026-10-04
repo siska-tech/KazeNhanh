@@ -74,3 +74,5 @@ Rust stable、C/C++ toolchain、pkg-config、OpenSSL開発headers、PowerShell 7
 2026-10-04: Windows、Rust/Cargo 1.99.0、Visual Studio 2022 CommunityのC++ツールを検出。セットアップで固定辞書のdownload・hash検証・license保存が成功。本番ライブラリのcargo checkが成功。テスト結果は移行タスクに記録する。
 
 TSanジョブはRust公式の[Sanitizer手順](https://doc.rust-lang.org/unstable-book/compiler-flags/sanitizer.html)に沿って、rust-srcと明示target、build-stdを設定。実行結果はCI上で確認する必要があり、WindowsローカルではTSanを実行していない。
+
+性能成果物はCriterionがCRITERION_OUTPUTを明示的に読み、soakはリポジトリ直下のartifacts/soakへ保存する。stdout/stderrのlogと測定JSONを分け、bench失敗は終了codeとして伝播する。これらはモックworkflowの反復であり、常駐SLMのメモリsoakとは別の検証。

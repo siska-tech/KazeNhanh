@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -61,6 +65,7 @@ jobs:
         with:
           name: coverage-lcov
           path: coverage/lcov.info
+          if-no-files-found: error
 
   thread-sanitizer:
     name: Thread Sanitizer Checks
@@ -126,6 +131,7 @@ jobs:
         with:
           name: criterion-results
           path: artifacts/criterion
+          if-no-files-found: error
 
       - name: Soak benchmark (short run)
         shell: pwsh
@@ -138,4 +144,5 @@ jobs:
         with:
           name: soak-logs
           path: artifacts/soak
+          if-no-files-found: error
 

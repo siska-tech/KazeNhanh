@@ -60,3 +60,11 @@ P0はprogressを維持する。CI/TSanは設定変更のみでremote実行未確
 
 学習済みGGUF資産の選定・参照ID照合とremote CI/TSan実行は引き続き必要。合成GGUFの成功を言語品質検証へ読み替えず、P0はprogressを維持する。
 継続作業の検証: verify.ps1 -Offline成功。default unit 71件、実辞書/本番拒否3件、feature構成80件（unit71・workflow3・NLP3・並行性2・doctest1）成功。inference_smoke exampleのcargo checkも成功。
+
+### CI・性能成果物の復旧
+
+Draft PR: [#3](https://github.com/siska-tech/KazeNhanh/pull/3)。16fbaa2のLinux QA・TSanはremoteで成功。
+
+CriterionがCRITERION_OUTPUTを読むconfigを追加。soakのrootをリポジトリ直下へ訂正し、stdout/stderrログと測定JSONを分けて保存。失敗を伝播し、終了時に環境変数と作業ディレクトリを復元する。CIは成果物欠落をエラーにする。
+
+bench targetのcargo check、soakの0分起動、隔離fixtureで子プロセス失敗の伝播をローカル検証。性能値はモックworkflowでありSLM性能を示さない。
