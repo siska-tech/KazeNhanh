@@ -1,0 +1,9 @@
+[package]
+name = "kaze_nhanh_sudachi"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+kaze_nhanh_core = { path = "../core", version = "0.2.0" }
+sudachi = { git = "https://github.com/WorksApplications/Sudachi.rs", tag = "v0.6.9" }
+sha2 = "0.10"

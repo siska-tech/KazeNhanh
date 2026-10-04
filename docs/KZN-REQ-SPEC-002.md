@@ -12,4 +12,4 @@
 8. Fine-tuning/model adapter/calibrationは独立artifact/backendとして後から拡張する。学習処理はruntimeへ入れない。
 9. calibration前のscoreを確率と称さず、三軸を無条件に平均しない。日本語の判定品質とCPU SLOはP2 baseline後に定める。
 
-P1受入: backend非依存core、モデルなし起動、原文/span/未評価/schema契約試験、legacy境界、仕様の同期。全体crate分離の適用は具体的構成変更の承認待ち。
+P1受入: backend非依存core、モデルなし起動、原文/span/未評価/schema契約試験、legacy境界、仕様の同期。ユーザーの承認後、core/Sudachi/legacyを分離して0.2へ切り替えた。

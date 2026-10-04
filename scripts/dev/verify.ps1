@@ -10,21 +10,26 @@ try {
     }
     $networkArgs = @()
     if ($Offline) { $networkArgs += '--offline' }
-    # Independent contracts must remain free of all NLP/model/Git backends.
-    $coreManifest = 'crates/core/Cargo.toml'
-    Invoke-KazeCargo -CargoArguments (@('test', '--manifest-path', $coreManifest, '--target-dir', 'target', '--locked') + $networkArgs)
-    $tree = & (Get-KazeCargo) tree --manifest-path $coreManifest --locked --edges normal @networkArgs
-    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect core dependencies.' }
-    if (($tree -join "`n") -match '(?m)\b(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|sudachi|saku) v') {
-        throw 'Evaluation core must not depend on backend/legacy libraries.'
-    }
-    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments @('fmt', '--all', '--', '--check')
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--lib') + $networkArgs)
-    # Unit tests compile the production backend and inject mocks explicitly.
-    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--lib') + $networkArgs)
-    # The public constructor always uses the production backend.
-    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'nlp_resources') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--no-default-features', '--lib') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('check', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)
+    foreach ($mode in @('core', 'default', 'minimal')) {
+        $treeArgs = @('tree', '--locked', '--edges', 'normal') + $networkArgs
+        if ($mode -eq 'core') { $treeArgs += @('-p', 'kaze_nhanh_core') }
+        if ($mode -eq 'minimal') { $treeArgs += '--no-default-features' }
+        $tree = & (Get-KazeCargo) @treeArgs
+        if ($LASTEXITCODE -ne 0) { throw "Cannot inspect $mode dependencies." }
+        $forbidden = '(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|saku|tokenizers) v'
+        if ($mode -ne 'default') { $forbidden = '(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|saku|tokenizers|sudachi|kaze_nhanh_sudachi) v' }
+        if (($tree -join "`n") -match $forbidden) { throw "Unexpected backend/legacy dependency in $mode." }
+    }
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_core') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'evaluation_contracts') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_nlp') + $networkArgs)
+    # Production legacy runtime stays real; only fixtures use explicit mocks.
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--features', 'legacy', '--test', 'nlp_resources') + $networkArgs)
     $expected = @{
         api_workflows = @('git_report_includes_markdown_additions', 'git_native_rag_synthesizes_summary_for_changes', 'summarize_with_details_returns_sentences_and_summary')
         thread_safety = @('summarize_with_details_is_thread_safe', 'git_native_rag_handles_parallel_invocations')
@@ -36,5 +41,5 @@ try {
             if ($listing -notcontains "${name}: test") { throw "Expected test not registered: $target/$name" }
         }
     }
-    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--features', 'mock_inference') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--workspace', '--all-features') + $networkArgs)
 } finally { Pop-Location }

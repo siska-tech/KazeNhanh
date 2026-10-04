@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ModelPath,
@@ -17,7 +17,7 @@ foreach ($asset in @($modelAsset, $tokenizerAsset, $referenceAsset)) {
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $repoRoot
 try {
-    $runArgs = @('run', '--locked', '--example', 'inference_smoke')
+    $runArgs = @('run', '--locked', '--features', 'legacy', '--example', 'inference_smoke')
     if ($Offline) { $runArgs += '--offline' }
     Invoke-KazeCargo -CargoArguments ($runArgs + @('--', $modelAsset, $tokenizerAsset, $referenceAsset))
 } finally { Pop-Location }

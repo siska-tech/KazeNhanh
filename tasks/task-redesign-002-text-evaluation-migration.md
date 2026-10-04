@@ -17,7 +17,7 @@ branch: feat/2-text-evaluation-foundation
 ## 進捗
 
 - [x] P0: 検証基盤復旧（2026-10-04完了）
-- [ ] P1: 評価契約・責務分離
+- [x] P1: 評価契約・責務分離（2026-10-04完了）
 - [ ] P2: 一次検出MVP
 - [ ] P3: 選択的SLM
 - [ ] P4: 校正・品質受入
@@ -101,3 +101,22 @@ Windows検証: Core i7-1360P、Rust 1.99.0、debug build。8生成は26,794〜39
 自動承認レビューは「src全体の移設、Cargo workspace・依存関係・公開APIの広範な変更は、P1継続指示だけではこの具体的な非段階的構成変更への明示承認が不足」として、構成変更とビルド検証を拒否。既存構成を復元し、影響を限定した新規core/API追加の代替は承認されてbuild・契約試験が成功。全体分離・0.2 API変更の承認をユーザーへ確認中。P1は未完了。
 
 P1先行実装の最終ローカル検証: verify.ps1 -Offline成功。core契約8件、公開API起動1件、default unit71件、実辞書3件、feature構成81件。coreのCargo依存はserde/serde_json/thiserrorのみ。既存0.1構成の回帰も成功。
+
+### P1構成変更の承認（2026-10-04）
+
+ユーザーから「進めてください」と明示承認を受領。core・Sudachi・legacyのcrate分離、0.2への切替、旧APIのlegacy feature化を再開。以下の結果で以前の承認待ち記録を更新する。
+
+## P1完了（2026-10-04）
+
+ユーザーがcrate分離・0.2切替・旧API feature化を明示承認。承認待ちは解消済み。
+
+- [x] core/Sudachi/legacyをCargo workspaceへ分離し、root facadeを0.2開発版に変更
+- [x] defaultは新Sudachiだけ、no-default-featuresはcoreのみ。通常依存のGit/Markdown/Candle/生成tokenizer混入をverify.ps1で拒否
+- [x] owned辞書bytes/ローカルpath、Mode A/B/C、辞書/settings SHA256、全形態素のbackend非依存adapterを実装
+- [x] 旧APIはlegacy featureでrootへ再export、またはlegacy 0.1 crateへ直接依存。旧errorは新EvaluationErrorから分離
+- [x] モデルなしで起動するevaluate exampleを実行し、undetermined/null/SLM calls=0を確認
+- [x] verify.ps1 -Offline成功。core8件、最小公開API1件、新Sudachi5件、legacy unit71件、旧NLP3件、workflow3件、並行性2件、doctest1件（全workspace計94件）
+- [x] no-default+legacyのexample、mock_inference benchのcargo check成功
+- [x] REQ/API/ARC-002・README・開発手順・旧推論手順・[0.2移行ガイド](../docs/migration-0.2.md)を同期
+
+P2の標準検出器はまだ設定していない。形態素解析の成功を正常判定にせず、全文未評価を保持する。SLM judge/選択routingはP3で別backendとして実装し、legacy生成を評価経路へ接続しない。移行全体のstatusはprogress、end_dateは未設定のまま。

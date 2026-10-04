@@ -1,3 +1,5 @@
+> 0.2/P1: この文書はkaze_nhanh_legacyへ分離した旧生成runtimeの検証手順です。rootで旧APIを使うにはlegacy featureが必要。新評価APIはSLMを起動しません。[0.2移行ガイド](migration-0.2.md)。
+
 # 推論エンジンの利用と検証
 
 2026-10-04、Issue #2/P0で本番runtimeとテストfixtureを分離した。

@@ -2,261 +2,74 @@
 
 ![KazeNhanh Mascot](docs/img/KazeNhanh.png)
 
-KazeNhanh は、Git の変更差分と軽量推論パイプラインを組み合わせてドキュメントを要約・可視化するための Rust ライブラリです。GitNativeRAG、HybridSummarizer、NLP/Markdown 基盤サービスを統合し、テキスト妥当性評価基盤への移行を進めています。現在の検証範囲は[開発環境手順](docs/development-setup.md)を参照してください。
+形態素解析と選択的SLMを組み合わせる、detection first / CPU-first / local-firstのテキスト妥当性評価基盤を開発しています。0.2開発版では評価core・Sudachi backend・旧Git/要約機能を分離しました。
 
-## プロジェクト概要
-- Rust stableを対象とするライブラリ (`kaze_nhanh`) を提供
-- Git 差分収集・Markdown 構造解析・Sudachi ベースの日本語 NLP を統合
-- HybridSummarizer と GitNativeRAG パイプラインで差分要約や合成要約を生成
-- ThreadSanitizer や Criterion/ソークテストを含む CI パイプラインで品質保証
+**現在はP1まで完了。標準の検出器は未実装です。** 形態素解析と原文/span保持が動き、評価結果はundetermined・三軸score=nullを返します。一次検出MVPはP2、選択的SLMはP3、校正・品質受入はP4で追加します。
 
-## 特長
-- **Git ネイティブな差分収集**: 直近コミットから Markdown 追加行を抽出し、要点レポート化
-- **ハイブリッド要約**: LexRank による重要文抽出と推論ベースの合成による多段要約
-- **Sudachi NLP サポート**: インメモリ辞書を扱う形態素解析と文分割ユーティリティ
-- **堅牢なエラーモデル**: `KazeNhanhError` による詳細な失敗理由とテストでの検証
-- **完全な CI**: `cargo fmt` / `cargo test` / `cargo llvm-cov` / ThreadSanitizer / Criterion / ソークを自動実行
+## 利用開始
 
-## 迅速な利用開始
-
-開発PCの準備は[セットアップ手順](docs/development-setup.md)を参照してください。Cargo依存と固定Sudachi辞書を取得するPowerShellスクリプトを用意しています。
-
-
-### 依存関係
-- Rust stable (Rustup推奨、今回の検証は1.99.0。最低対応版は未検証)
-- Sudachi 辞書 (`system.dic`) と設定 (`sudachi.json`) をインメモリで取り扱うためのバイナリ
-- (任意) GGUF 形式のモデルファイル — モック実装は同梱されており、実モデルは別途取得してください
-
-### インストール
-リポジトリをクローンしてライブラリをビルドします。
+新PCの準備と固定辞書の取得は[セットアップ手順](docs/development-setup.md)を参照してください。
 
 ```powershell
-git clone https://github.com/siska-tech/KazeNhanh.git
-cd KazeNhanh
-cargo build --all
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup-dev.ps1
+cargo run --locked --example evaluate -- "東京都で自然な日本語を解析します。"
 ```
 
-アプリケーションから利用する場合は、`Cargo.toml` に Git 依存として追加できます。
+GGUFモデルの配置は不要です。上のexampleはSudachi解析を行い、未評価reportをJSONで返します。通常の評価実行でdownloadやcloud fallbackは行いません。
+
+ローカルアプリケーションの依存例:
 
 ```toml
 [dependencies]
-kaze_nhanh = { git = "https://github.com/siska-tech/KazeNhanh", tag = "v0.1.0" }
+kaze_nhanh = { path = "../KazeNhanh" }
 ```
 
-## 使い方のヒント
+```rust,ignore
+use kaze_nhanh::{japanese_engine, EvaluationConfig, SudachiConfig, SudachiMode, TextInput};
 
-### Git 差分レポート
-
-```rust
-use kaze_nhanh::{foundation::git_service, GitReportOptions};
-
-let options = GitReportOptions {
-    repo_path: "./docs",
-    days_since: 7,
-    target_extensions: None,
-    custom_prompt: None,
-};
-
-let ctx = git_service::prepare_repository(&options)?;
-let diffs = git_service::collect_markdown_diffs(&ctx, &options.effective_extensions())?;
+let assets = SudachiConfig::from_paths("system.dic", "sudachi.json", SudachiMode::C)?;
+let engine = japanese_engine(assets, EvaluationConfig::default())?;
+let report = engine.evaluate(TextInput::new("短い入力です。"))?;
 ```
 
-### ハイブリッド要約パイプライン
+入力sourceはOCR・ASR・LLM・Form・PlainText等。画像/音声処理は呼出側が行い、coreはテキストと任意の参照文脈・annotationsを受理します。原文UTF-8 byte spanを保持し、未評価・文脈不足・backend失敗を正常へ変換しません。訂正文は返しません。
 
-```rust
-use kaze_nhanh::{pipeline::hybrid_summarizer::HybridSummarizer, EngineConfig};
+## 構成と互換性
 
-let engine = EngineConfig::new(MODEL_BYTES, DICT_BYTES, SETTINGS_BYTES);
-let summarizer = HybridSummarizer::default();
-let summary = summarizer.execute(&engine, &diffs)?;
-```
-
-### NLP ユーティリティ
-
-```rust
-use kaze_nhanh::foundation::nlp::{split_sentences, NlpService};
-
-let sentences = split_sentences("風が吹けば桶屋が儲かる。雨が降る?");
-let tokens = NlpService::new(&engine)?.tokenize(&sentences[0])?;
-```
-
-Sudachi 辞書はライセンスの都合で同梱していません。利用時は公式配布物を取得し、`include_bytes!` などでインメモリ展開してください。
-
-## 品質保証と CI
-- `cargo fmt --all -- --check` : Rustfmt 準拠を確認
-- `cargo test --all --all-features` : ユニット・結合テスト
-- `cargo llvm-cov --lcov --output-path coverage/lcov.info` : カバレッジ計測
-- `cargo bench --features mock_inference --bench performance` : Criterion パフォーマンステスト
-- `pwsh ./scripts/soak/run_soak.ps1 -DurationMinutes 5 -IntervalSeconds 60` : 短時間ソーク
-
-`.github/workflows/testing.yml` では次の 3 ジョブを定義しています。
-
-| Job | 内容 |
+| crate / feature | 責務 |
 | --- | --- |
-| `tests` | `cargo fmt --check`, `cargo test`, `cargo llvm-cov` を実行し、`coverage/lcov.info` をアーティファクト化 |
-| `thread-sanitizer` | Nightly + `-Z sanitizer=thread` で並行性テストを実行 |
-| `performance` | Criterion ベンチと PowerShell ソークテストを実施し、結果をアーティファクト保存 |
+| kaze_nhanh_core | Input/Report/Error、三軸score、原文span、backend trait。serde/serde_json/thiserrorのみ |
+| kaze_nhanh_sudachi / default | owned辞書、Mode A/B/C、全形態素、辞書/設定hash。モデル不要 |
+| kaze_nhanh / no-default-features | coreだけのfacade。MorphAnalyzerを明示注入 |
+| kaze_nhanh_legacy / legacy | 旧Git・Markdown・RAG・要約・Candle runtime |
+| mock_inference | legacy workflowへの明示fake注入。通常コンストラクタは本番runtime |
 
-## プロジェクト構成
-- `src/` : コアライブラリ (foundation, inference, pipeline)
-- `benches/` : Criterion ベンチマーク
-- `scripts/soak/` : PowerShell ソークテストスクリプト
-- `tasks/` : タスク・サブタスクとロードマップの管理
-- `docs/` : 詳細設計や利用ガイド
+旧KazeNhanhEngine/EngineConfig等を使う場合は`features = ["legacy"]`を指定するか、kaze_nhanh_legacyへ直接依存してください。defaultのAPI availability変更を0.2の変更として扱います。[0.2移行ガイド](docs/migration-0.2.md)と[旧推論資産の検証](docs/inference_engine.md)を参照。packageの公開・PRのmergeは未実施です。
+
+## 検証
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify.ps1 -Offline
+```
+
+core/default/minimalの依存境界、原文/span/未評価/schema契約、モデル不要の実Sudachi、Mode・並行評価、旧本番runtime、結合/並行性workflowを検証します。CIはWindows/Linux QA、TSan、学習済みGGUF CPU smoke、Criterion/Soakを実行します。Criterion/Soakは旧モックworkflowの測定であり、新評価器の品質・SLM性能を示しません。
 
 ## 開発進捗
 
-- 2026-10-04: P1に着手。backend非依存の評価契約とモデルなし起動のEvaluationEngineを追加。既定はundetermined/nullで、検出器はP2で追加。[新API仕様](docs/KZN-API-SPEC-002.md)。crate全体分離・0.2切替は承認待ち。
+- 2026-10-04: P1完了。ユーザー承認後にcore/Sudachi/legacyをworkspaceへ分離し、0.2へ切替。モデル不要の標準facade、最小feature、legacy互換と移行ガイドを整備。
+- 2026-10-04: P0完了。実辞書、明示fake注入、学習済みGGUF CPU生成、公式tokenizer参照ID、CI成果物を検証。
+- 次工程: P2一次検出MVP。正常語・短文・固有名詞も含むbaselineと説明可能rulesを追加。
 
-- 2026-10-04: P0完了。学習済みGGUFのCPU生成・再現性と公式tokenizerの独立参照IDを確認し、固定モデルセットアップ・実モデルCIを追加。次工程はP1（評価契約・責務分離）。[進捗記録](tasks/task-redesign-002-text-evaluation-migration.md)。
-- 2026-10-04: P0継続。推論backendを明示注入へ変更し、tokenizer資産の不一致を拒否。合成量子化GGUFで本番CPU経路を検証。[推論手順](docs/inference_engine.md)。
-- 2026-10-04: [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)を起票し、P0に着手。セットアップとテスト登録を整備し、Windowsで実辞書・結合・並行性テストが成功。[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md)。
-- 2026-10-04: [テキスト妥当性評価基盤への再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)を作成。実装は未着手。既存の結合テスト登録・実モデル検証に課題があり、旧来の品質表記は同計画の監査結果と併せて参照してください。
-- 2025-11-08: ThreadSanitizer ジョブのテストフィルタを修正し、並行性テスト実行を安定化。
-- 2025-11-08: デモ用Gitリポジトリ (`task-demo-001-git-sample-repo`) を整備し、Tauriデモで使用するブランチ・タグ・衝突シナリオを追加。
-- 2025-11-08: CI/CD 統合 (`subtask-testing-001-06-ci`) を完了し、テスト・ThreadSanitizer・性能計測を自動化。
-- 2025-11-07: パフォーマンス/ソーク基盤 (`subtask-testing-001-05-performance`) を整備し、Criterion と soak スクリプトを公開。
-- 2025-11-07: GitNativeRAG パイプライン (`task-pipeline-002-git-native-rag`) を完成させ、差分要約フローを確立。
-- 2025-11-07: HybridSummarizer (`task-pipeline-001-hybrid-summarizer`) を実装し、LexRank/推論合成パスを追加。
-- 2025-11-07: 推論エンジン (`task-inference-001-inference-engine`) を完成させ、GGUF ロードとトークナイザー共有を実装。
-- 2025-11-07: コアエンジン/基盤サービス (`task-core-001-*`, `task-foundation-00*-*`) を揃え、公開 API を安定化。
+[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md) / [ロードマップ](tasks/ROADMAP.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2) / [Draft PR #3](https://github.com/siska-tech/KazeNhanh/pull/3)
 
-詳細なタスクリストと今後の計画は `tasks/ROADMAP.md` を参照してください。
+## 仕様・設計
 
-## コントリビューション
-Issue や Pull Request を歓迎します。大きな変更の場合は事前に議論してください。スタイルは `cargo fmt` を適用し、テストとカバレッジを通過させてください。
+- [再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)
+- [API契約002](docs/KZN-API-SPEC-002.md)、[構成002](docs/KZN-ARC-DESIGN-002.md)、[要件002](docs/KZN-REQ-SPEC-002.md)
+- 001仕様と旧タスクはGit/要約機能の履歴として保持します。
 
-## ライセンス
-このプロジェクトは `LICENSE` ファイルに記載されたライセンスの下で提供されます。
+## English
 
-## 謝辞
-KazeNhanh は Rust コミュニティと Sudachi/Candle エコシステムの恩恵を受けています。貢献者の皆さまに感謝します。
+KazeNhanh 0.2 is a local, detection-first text evaluation foundation. P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
 
----
-
-# KazeNhanh (English)
-
-![KazeNhanh Mascot](docs/img/KazeNhanh.png)
-
-KazeNhanh is a Rust library that fuses Git diff analysis with lightweight inference pipelines to summarize and surface documentation changes. It bundles GitNativeRAG, HybridSummarizer, and shared NLP/Markdown services, with a migration toward local text evaluation underway. See [development setup](docs/development-setup.md) for the current validation scope.
-
-## Overview
-- Ships the `kaze_nhanh` library targeting Rust stable
-- Unifies Git diff collection, Markdown structure analysis, and Sudachi-based Japanese NLP
-- Generates diff summaries and synthesized reports via HybridSummarizer and GitNativeRAG pipelines
-- Ensures quality with CI jobs covering ThreadSanitizer, Criterion benchmarks, and soak testing
-
-## Highlights
-- **Git-native diff ingestion**: extracts added Markdown lines from recent commits to build concise reports
-- **Hybrid summarization**: combines LexRank sentence ranking with inference-powered synthesis
-- **Sudachi NLP support**: in-memory dictionary handling plus sentence segmentation utilities
-- **Robust error model**: rich `KazeNhanhError` variants validated by extensive tests
-- **Comprehensive CI**: automates `cargo fmt`, `cargo test`, `cargo llvm-cov`, ThreadSanitizer, Criterion, and soak runs
-
-## Getting Started Fast
-
-### Prerequisites
-- Rust 1.75 or later (via Rustup)
-- Sudachi resources (`system.dic`, `sudachi.json`) loadable in-memory
-- (Optional) GGUF model files — mock inference assets are bundled; real models must be supplied separately
-
-### Installation
-Clone the repository and build the library:
-
-```powershell
-git clone https://github.com/siska-tech/KazeNhanh.git
-cd KazeNhanh
-cargo build --all
-```
-
-To consume it from another crate, add a Git dependency:
-
-```toml
-[dependencies]
-kaze_nhanh = { git = "https://github.com/siska-tech/KazeNhanh", tag = "v0.1.0" }
-```
-
-## Usage Tips
-
-### Git Diff Reports
-
-```rust
-use kaze_nhanh::{foundation::git_service, GitReportOptions};
-
-let options = GitReportOptions {
-    repo_path: "./docs",
-    days_since: 7,
-    target_extensions: None,
-    custom_prompt: None,
-};
-
-let ctx = git_service::prepare_repository(&options)?;
-let diffs = git_service::collect_markdown_diffs(&ctx, &options.effective_extensions())?;
-```
-
-### Hybrid Summarization Pipeline
-
-```rust
-use kaze_nhanh::{pipeline::hybrid_summarizer::HybridSummarizer, EngineConfig};
-
-let engine = EngineConfig::new(MODEL_BYTES, DICT_BYTES, SETTINGS_BYTES);
-let summarizer = HybridSummarizer::default();
-let summary = summarizer.execute(&engine, &diffs)?;
-```
-
-### NLP Utilities
-
-```rust
-use kaze_nhanh::foundation::nlp::{split_sentences, NlpService};
-
-let sentences = split_sentences("When the wind blows, the cooper prospers.");
-let tokens = NlpService::new(&engine)?.tokenize(&sentences[0])?;
-```
-
-Sudachi dictionaries are not bundled for licensing reasons. Obtain the official distribution and embed it (e.g., via `include_bytes!`) when deploying.
-
-## Quality & CI
-- `cargo fmt --all -- --check`: enforce Rustfmt style
-- `cargo test --all --all-features`: run unit and integration tests
-- `cargo llvm-cov --lcov --output-path coverage/lcov.info`: capture coverage reports
-- `cargo bench --features mock_inference --bench performance`: execute Criterion benchmarks
-- `pwsh ./scripts/soak/run_soak.ps1 -DurationMinutes 5 -IntervalSeconds 60`: perform a short soak run
-
-`.github/workflows/testing.yml` defines three jobs:
-
-| Job | Details |
-| --- | --- |
-| `tests` | Runs `cargo fmt --check`, `cargo test`, `cargo llvm-cov`, then uploads `coverage/lcov.info` |
-| `thread-sanitizer` | Executes concurrency tests using nightly Rust with `-Z sanitizer=thread` |
-| `performance` | Runs Criterion benches plus the PowerShell soak script and stores artifacts |
-
-## Repository Layout
-- `src/`: core library modules (foundation, inference, pipeline)
-- `benches/`: Criterion benchmark suites
-- `scripts/soak/`: PowerShell soak testing scripts
-- `tasks/`: task and subtask tracking plus roadmap
-- `docs/`: design notes and usage guides
-
-## Project Progress
-- 2026-10-04: Started [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2), added reproducible Sudachi setup and registered integration/concurrency tests; local Windows verification passed. P0 completed with trained GGUF CPU generation, repeatability and independently generated official tokenizer IDs. Next: P1 evaluation contracts and separation.
-- 2026-10-04: Added the [text evaluation redesign audit and plan](docs/KZN-REDESIGN-PLAN-001.md). Implementation has not started. The audit identifies gaps in integration-test registration and real-model validation; read earlier quality claims alongside these findings.
-- 2025-11-08: Completed CI/CD integration (`subtask-testing-001-06-ci`) with automated tests, ThreadSanitizer, and performance runs
-- 2025-11-07: Finalized performance/soak tooling (`subtask-testing-001-05-performance`) and published Criterion + soak workflows
-- 2025-11-07: Delivered GitNativeRAG pipeline (`task-pipeline-002-git-native-rag`) enabling diff-to-summary flows
-- 2025-11-07: Implemented HybridSummarizer (`task-pipeline-001-hybrid-summarizer`) with LexRank and inference synthesis
-- 2025-11-07: Completed inference engine (`task-inference-001-inference-engine`) with GGUF loading and tokenizer sharing
-- 2025-11-07: Stabilized core engine & foundation services (`task-core-001-*`, `task-foundation-00*-*`) for the public API
-
-See `tasks/ROADMAP.md` for the full backlog and future plans.
-
-## Contributing
-We welcome issues and pull requests. For larger changes, please start a discussion first. Run `cargo fmt`, ensure all tests and coverage checks pass, and follow the repository guidelines.
-
-## License
-Provided under the license terms described in the `LICENSE` file.
-
-## Acknowledgements
-KazeNhanh benefits from the Rust community and the Sudachi/Candle ecosystems. Thank you to all contributors.
-
-
-
+The standard detector is not implemented yet: reports explicitly return undetermined verdicts and null scores. P2 adds primary detection, P3 selective SLM judging, and P4 calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).

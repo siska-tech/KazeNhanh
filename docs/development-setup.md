@@ -58,12 +58,14 @@ RustのSudachi v0.6.9はCargo.lockで固定する。辞書は公式配布の[Sud
 
 | コマンド | 確認するもの |
 | --- | --- |
-| `cargo check --locked --lib` | 本番runtimeを型検査（mock featureでも置換されない） |
-| `cargo test --locked --test nlp_resources` | 実辞書と本番NLP。SLMの初期化・推論は行わない |
-| `cargo test --locked --features mock_inference` | unit testsと登録済みGit/要約/並行性workflow。workflowは明示的にSLM fakeを注入、NLPは実辞書。本番CPUの合成GGUF試験も実行 |
+| `cargo check --locked --lib` | default評価facade＋Sudachi。Git/Candle/生成tokenizerを含まない |
+| `cargo test --locked --test evaluation_nlp` | owned実辞書、Mode A/B/C、全形態素/span、モデル不要起動、並行評価 |
+| `cargo test --locked --no-default-features --test evaluation_contracts` | 別backendを注入するcore-only公開API |
+| `cargo test --locked --features legacy --test nlp_resources` | 旧NLP APIと無効GGUF拒否 |
+| `cargo test --locked --workspace --all-features` | core・新Sudachi・legacy unit・旧workflowの全試験。通常コンストラクタは本番runtime |
 | `scripts/dev/verify.ps1` | 上記とformat、期待する結合・並行性テスト名の登録を確認 |
 
-`cargo test`でも本番runtimeをコンパイルし、fakeは明示的に注入する。合成量子化GGUFでCPU forwardとKV cacheを確認するが、P0の学習済みSmolLM2資産は専用ジョブでCPU生成・参照ID・再現性を検証する。日本語判定精度・速度SLOはP3/P4で扱う。[推論資産検証手順](inference_engine.md)に従ってverify-model.ps1へローカルGGUF・tokenizer・参照token IDを渡す。
+defaultの`cargo test`では新評価経路だけを実行する。旧本番runtimeは`cargo test -p kaze_nhanh_legacy`、workflow fakeはmock_inferenceを明示する。合成量子化GGUFでCPU forwardとKV cacheを確認するが、P0の学習済みSmolLM2資産は専用ジョブでCPU生成・参照ID・再現性を検証する。日本語判定精度・速度SLOはP3/P4で扱う。[推論資産検証手順](inference_engine.md)に従ってverify-model.ps1へローカルGGUF・tokenizer・参照token IDを渡す。
 
 ## Linux CI
 
@@ -76,3 +78,7 @@ Rust stable、C/C++ toolchain、pkg-config、OpenSSL開発headers、PowerShell 7
 TSanジョブはRust公式の[Sanitizer手順](https://doc.rust-lang.org/unstable-book/compiler-flags/sanitizer.html)に沿って、rust-srcと明示target、build-stdを設定。実行結果はCI上で確認する必要があり、WindowsローカルではTSanを実行していない。
 
 性能成果物はCriterionがCRITERION_OUTPUTを明示的に読み、soakはリポジトリ直下のartifacts/soakへ保存する。stdout/stderrのlogと測定JSONを分け、bench失敗は終了codeとして伝播する。これらはモックworkflowの反復であり、常駐SLMのメモリsoakとは別の検証。
+
+## 0.2の構成とモデル不要利用
+
+[移行ガイド](migration-0.2.md)を参照。cargo run --example evaluate -- textはSudachi資産だけで起動し、P1では未評価reportを返す。verify.ps1はdefault/no-default/coreの通常依存を検査し、旧Git/Markdown/Candle等の混入をエラーにする。

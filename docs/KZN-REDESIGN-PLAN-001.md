@@ -3,7 +3,7 @@
 - 文書ID: KZN-REDESIGN-PLAN-001
 - 作成日: 2026-10-04 (Asia/Tokyo)
 - 監査対象: commit `ddea985`、Rust crate `kaze_nhanh` 0.1.0
-- 状態: 初回監査・設計提案。監査後、[Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0に着手。現在の検証結果・残作業は[移行タスク](../tasks/task-redesign-002-text-evaluation-migration.md)を参照。以下の監査結果は変更前の記録。
+- 状態: 初回監査・設計提案。監査後、[Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0・P1を完了。現在の検証結果・残作業は[移行タスク](../tasks/task-redesign-002-text-evaluation-migration.md)を参照。以下の監査結果は変更前の記録。
 - 対象: src、Cargo設定、tests、benches、CI、既存仕様・README・ロードマップ。
 
 ## 1. 結論と境界

@@ -31,3 +31,7 @@ P1のcoverageは各軸について全文の評価済/未評価spanを明示す�
 全enumはsnake_case。未知のreport fieldを拒否する。JSON deserializeだけでは原文とのspan対応を保証できないため、`EvaluationReport::validate()`でschema/score/必須軸/coverage/spanを検証する。未知schemaを黙って受理しない。
 
 API Errorにはgit2、Candle、Sudachiの固有型を含めず、backend名と診断messageを返す。入力文章の問題はIssue/Reportで返し、資産ロード・backend contract違反はErrorで返す。
+
+## 0.2標準backend
+
+japanese_engine(SudachiConfig, EvaluationConfig)でSudachiを組み立てる。SudachiConfig::from_pathsまたはowned dictionary/settings bytesを指定し、Mode A/B/Cを選ぶ。rootのdefaultはSudachiのみ、no-default-featuresでは任意MorphAnalyzerを注入する。旧APIはlegacy featureへ分離。[具体例と移行](migration-0.2.md)。
