@@ -38,3 +38,5 @@ smallからcore/fullで3件の分割が変わった。core/fullのOCR15件の分
 現時点で推薦辞書を変更しない。次の実データ比較ではsegment/span検出、誤警報/保留、自然な誤認識、辞書別の統計/fusion、cold/warm latency・RSS・資産容量も比較する。未知語を辞書が認識することと、原資料を忠実に転記したことは別。辞書別に校正・profileを検証する。
 
 候補review比較: matrixは人工candidate-review-contract12例も各辞書で実行し、candidate-review-contract.jsonへ保存する。既定/opt-inの2policyは全辞書で同じ期待運用となることを確認。[仕様と品質上の限界](recognition-candidate-review.md)。
+
+2026-10-05: 各editionのquality-001.json〜quality-003.jsonに[オフライン品質集計](recognition-quality.md)を保存。確認済み転記だけを採点し、未確認8件と保留を明示する。詳細はローカル出力のまま。

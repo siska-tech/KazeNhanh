@@ -53,3 +53,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-04: [small/core/full辞書比較](../docs/sudachi-dictionary-matrix.md)を追加。同版・Mode CでOCR15件と人工hard-cleanを観察し、統計assetを辞書別に生成。分割差はあるがOCR判定は全件保留のまま。実OCR/ASR・fusion/CPU品質の受入は継続。
 
 2026-10-05: [R2候補review baseline](../docs/recognition-candidate-review.md)を追加。raw候補不一致を明示opt-inでreviewへ送り、rank/spanを保存。人工12例を3辞書で比較。候補の正解性・誤り確率は未推定で、R2実品質受入は継続。
+
+2026-10-05: [R2オフライン品質集計](../docs/recognition-quality.md)を追加。確認済み転記だけでreview精度/再現率と低リスク受理率を計算し、保留を検出成功に数えない。3辞書matrixへ統合。独立実OCR/ASR評価とfusionは未完了。

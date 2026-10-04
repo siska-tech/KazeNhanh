@@ -249,3 +249,15 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 表記ゆれ・句読点差もreviewになる比較baseline。候補の存在だけで正解を保証せず、提供OCR15件のgoldから候補を作らない。R2はprogress。[仕様と限界](../docs/recognition-candidate-review.md)。
 
 検証結果: verify.ps1 -Offline成功。core40件、source契約13件（追加4）、実Sudachi9件、最小API・依存境界・全workspace/legacy回帰、3辞書のcandidate_baseline全12例、formatと文書リンク/diffを確認。前回0734f90のremote CIは成功。今回のCIはpush後に確認する。
+
+## R2オフライン品質集計（2026-10-05）
+
+- [x] モデル不要の事後評価器、report検証とID/原文/source/document一対一照合
+- [x] 確認済み転記のみ採点、未確認別集計、版付き比較規約、入力SHA256記録
+- [x] review/保留/low_riskと一致/不一致を交差集計し、分母0はnull
+- [x] small/core/fullのmatrixへ接続、人工の集計・取り違え拒否テストをverifyへ追加
+- [ ] 独立実OCR/ASR対・split・統合ablation・文字種/POS特徴・fusionと受入
+
+[仕様](../docs/recognition-quality.md)。R2全体はprogress。評価器の追加であり、検出品質が改善したとは扱わない。
+
+検証結果: verify.ps1 -Offline成功。追加4契約試験、small/core/full全matrix再実行、文書リンク・PowerShell構文・format/diff成功。3辞書とも確認済み7件（一致3/不一致4）、未確認8件、全15件保留。確認済み不一致review recall=0%、low-risk error rate=null。前回b988f1cのremote CIは成功。

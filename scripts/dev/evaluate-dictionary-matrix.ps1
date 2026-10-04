@@ -34,6 +34,8 @@ try {
                 $inputPath, $reportPath, $asset, $assetHash, 'contract_fixture', '--dictionary', $dictionary))
             Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'dictionary_snapshot') + $networkArgs + @('--',
                 $dictionary, $inputPath, $morphologyPath))
+            Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--no-default-features', '--example', 'recognition_quality') + $networkArgs + @('--',
+                $inputPath, $reportPath, (Join-Path $directory "quality-$suffix.json")))
             $reports = Get-Content -Raw -Encoding UTF8 -LiteralPath $reportPath | ConvertFrom-Json
             $morphology = Get-Content -Raw -Encoding UTF8 -LiteralPath $morphologyPath | ConvertFrom-Json
             foreach ($report in $reports.reports) {

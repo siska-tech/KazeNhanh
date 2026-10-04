@@ -226,3 +226,7 @@ typed confidence/候補/profile、依存ID、欠測/unknown、bounded Unicode al
 R2先行実装として、明示的opt-inのraw候補不一致review policyを追加。一次warning/errorまたは候補の文字列不一致があればreviewへ送り、差分span・rank・由来を保持する。両候補の正解性はunknown、risk=null。候補欠測/同一は保留を維持。句読点・表記ゆれもreviewとなる保守的な比較用baselineで、既定には採用しない。schema v2と既存source/profile境界を保持する。
 
 人工12例を3辞書で比較し、全辞書で既定review1→opt-in review9、SLM呼出0。期待運用の契約試験で、検出品質やrecall改善を示さない。提供OCRのgoldから候補を作らない。独立実OCR/ASR集合・転記規約/split・追加text特徴とfusion・品質受入は未完了、R2はprogress。[仕様・限界](recognition-candidate-review.md)。
+
+## 16. オフライン品質集計（2026-10-05）
+
+既存reportと確認済み転記の一対一照合、版付きraw/先頭bullet比較、decision別の一致/不一致/未確認件数と分母0のnullを実装。推論とgold照合を分離し、保留を検出成功へ変換しない。small/core/fullのローカルmatrixへ接続。[契約・指標](recognition-quality.md)。独立実OCR/ASR対・split・融合判定・品質受入は残り、R2はprogress。
