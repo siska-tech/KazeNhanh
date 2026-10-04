@@ -106,6 +106,8 @@ Sudachi 辞書はライセンスの都合で同梱していません。利用時
 
 ## 開発進捗
 
+- 2026-10-04: P1に着手。backend非依存の評価契約とモデルなし起動のEvaluationEngineを追加。既定はundetermined/nullで、検出器はP2で追加。[新API仕様](docs/KZN-API-SPEC-002.md)。crate全体分離・0.2切替は承認待ち。
+
 - 2026-10-04: P0完了。学習済みGGUFのCPU生成・再現性と公式tokenizerの独立参照IDを確認し、固定モデルセットアップ・実モデルCIを追加。次工程はP1（評価契約・責務分離）。[進捗記録](tasks/task-redesign-002-text-evaluation-migration.md)。
 - 2026-10-04: P0継続。推論backendを明示注入へ変更し、tokenizer資産の不一致を拒否。合成量子化GGUFで本番CPU経路を検証。[推論手順](docs/inference_engine.md)。
 - 2026-10-04: [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)を起票し、P0に着手。セットアップとテスト登録を整備し、Windowsで実辞書・結合・並行性テストが成功。[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md)。

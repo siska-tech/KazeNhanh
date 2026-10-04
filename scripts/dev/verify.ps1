@@ -10,6 +10,15 @@ try {
     }
     $networkArgs = @()
     if ($Offline) { $networkArgs += '--offline' }
+    # Independent contracts must remain free of all NLP/model/Git backends.
+    $coreManifest = 'crates/core/Cargo.toml'
+    Invoke-KazeCargo -CargoArguments (@('test', '--manifest-path', $coreManifest, '--target-dir', 'target', '--locked') + $networkArgs)
+    $tree = & (Get-KazeCargo) tree --manifest-path $coreManifest --locked --edges normal @networkArgs
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect core dependencies.' }
+    if (($tree -join "`n") -match '(?m)\b(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|sudachi|saku) v') {
+        throw 'Evaluation core must not depend on backend/legacy libraries.'
+    }
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments @('fmt', '--all', '--', '--check')
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--lib') + $networkArgs)
     # Unit tests compile the production backend and inject mocks explicitly.

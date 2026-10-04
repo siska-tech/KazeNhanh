@@ -12,6 +12,7 @@ name = "kaze_nhanh"
 path = "src/lib.rs"
 
 [dependencies]
+kaze_nhanh_core = { path = "crates/core", version = "0.2.0" }
 sudachi = { git = "https://github.com/WorksApplications/Sudachi.rs", tag = "v0.6.9" }
 git2 = { version = "0.18", features = ["vendored-libgit2"] }
 thiserror = "1"

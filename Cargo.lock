@@ -1069,6 +1069,7 @@ dependencies = [
  "candle-transformers",
  "criterion",
  "git2",
+ "kaze_nhanh_core",
  "pulldown-cmark",
  "saku",
  "serde",
@@ -1078,6 +1079,15 @@ dependencies = [
  "thiserror",
  "tokenizers",
  "tracing",
+]
+
+[[package]]
+name = "kaze_nhanh_core"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

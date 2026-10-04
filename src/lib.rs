@@ -1,6 +1,9 @@
 //! Core library entry point for the KazeNhanh engine crate.
 //! Currently exposes configuration primitives used to bootstrap services.
 
+/// Additive detection contracts; existing 0.1 facade remains unchanged.
+pub use kaze_nhanh_core::*;
+
 pub mod foundation;
 mod inference;
 mod pipeline;

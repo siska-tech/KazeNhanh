@@ -84,3 +84,20 @@ bench targetのcargo check、soakの0分起動、隔離fixtureで子プロセス
 Windows検証: Core i7-1360P、Rust 1.99.0、debug build。8生成は26,794〜39,503ms（短い英語prompt、各最大128生成token）。debug smokeの時間であり、製品latency SLOや日本語品質の保証ではない。英語学習モデルはP0互換性fixtureとして使用し、日本語judge選定・判定品質・p95/RSS・常駐SLM soakは計画どおりP3/P4で扱う。
 
 固定資産・参照生成・実行手順: [推論エンジン](../docs/inference_engine.md)、[参照fixture](../tests/fixtures/smollm2/README.md)。P0完了後の次工程はP1（評価契約・責務分離）。移行全体はprogressを維持し、P1〜P5は未完了。
+
+## P1着手（2026-10-04）
+
+評価契約とbackend traitをcoreへ新設し、Sudachi backend・legacy応用層・公開facadeをCargo workspaceで分離する。0.2開発版の変更として明記し、旧APIはlegacy feature/crateへ移行する。P1契約では検出未実装をundeterminedとして返し、P2の正常判定に読み替えない。
+
+### P1契約の先行実装と分離の承認待ち
+
+- [x] kaze_nhanh_coreを独立crateとして追加し、TextInput/Report/Error/config/byte span/三軸score/MorphAnalyzer/PrimaryDetectorを実装
+- [x] 0.1の既存API/default featureを維持し、新評価APIだけを追加で再export
+- [x] 原文/annotations保持、UTF-8境界、未評価/null、参照文脈不足、必須軸、schema/coverage、batchエラー分離のcore契約8件を検証
+- [x] coreのbackend依存禁止とモデル/辞書なしの公開API起動を検証する入口をverify.ps1へ追加
+- [x] REQ/API/ARCの002文書を追加
+- [ ] Sudachi owned backend、legacy移設、workspace/feature matrix、0.2のAPI切替
+
+自動承認レビューは「src全体の移設、Cargo workspace・依存関係・公開APIの広範な変更は、P1継続指示だけではこの具体的な非段階的構成変更への明示承認が不足」として、構成変更とビルド検証を拒否。既存構成を復元し、影響を限定した新規core/API追加の代替は承認されてbuild・契約試験が成功。全体分離・0.2 API変更の承認をユーザーへ確認中。P1は未完了。
+
+P1先行実装の最終ローカル検証: verify.ps1 -Offline成功。core契約8件、公開API起動1件、default unit71件、実辞書3件、feature構成81件。coreのCargo依存はserde/serde_json/thiserrorのみ。既存0.1構成の回帰も成功。
