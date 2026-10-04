@@ -32,3 +32,14 @@ criterion = { version = "0.5", features = ["html_reports"] }
 [[bench]]
 name = "performance"
 harness = false
+required-features = ["mock_inference"]
+
+[[test]]
+name = "api_workflows"
+path = "tests/integration/api_workflows.rs"
+required-features = ["mock_inference"]
+
+[[test]]
+name = "thread_safety"
+path = "tests/concurrency/thread_safety.rs"
+required-features = ["mock_inference"]

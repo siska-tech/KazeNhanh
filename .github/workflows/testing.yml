@@ -11,8 +11,12 @@ env:
 
 jobs:
   tests:
-    name: Unit & Integration Tests
-    runs-on: ubuntu-latest
+    name: Unit, Integration & Real NLP Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +25,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt
           profile: minimal
           override: true
 
@@ -28,6 +33,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
+        if: runner.os == 'Linux'
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
@@ -35,15 +41,22 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Run unit and integration tests
-        run: cargo test --all --all-features
+      - name: Set up pinned Sudachi dictionary
+        shell: pwsh
+        run: ./scripts/dev/setup-dev.ps1
+
+      - name: Verify production build, real NLP and registered mock workflows
+        shell: pwsh
+        run: ./scripts/dev/verify.ps1 -Offline
 
       - name: Generate coverage report
+        if: runner.os == 'Linux'
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --lcov --output-path coverage/lcov.info
+          cargo llvm-cov --workspace --features mock_inference --lcov --output-path coverage/lcov.info
 
       - name: Upload coverage artifact
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-lcov
@@ -60,6 +73,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          components: rust-src
           profile: minimal
           override: true
 
@@ -68,13 +82,16 @@ jobs:
         with:
           key: tsan-${{ runner.os }}
 
+      - name: Set up pinned Sudachi dictionary
+        shell: pwsh
+        run: ./scripts/dev/setup-dev.ps1
+
       - name: Run concurrency-focused tests with ThreadSanitizer
         env:
           RUSTFLAGS: "-Z sanitizer=thread"
           RUSTDOCFLAGS: "-Z sanitizer=thread"
         run: |
-          cargo +nightly test summarize_with_details_is_thread_safe -- --test-threads=1
-          cargo +nightly test git_native_rag_handles_parallel_invocations -- --test-threads=1
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu --locked --features mock_inference --test thread_safety -- --test-threads=1
 
   performance:
     name: Performance & Soak Benchmarks
@@ -87,6 +104,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt
           profile: minimal
           override: true
 

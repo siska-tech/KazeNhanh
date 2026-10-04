@@ -446,7 +446,10 @@ mod tests {
     #[test]
     fn collects_markdown_diffs_from_merge_commits() {
         let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let repo = Repository::init(temp_dir.path()).expect("failed to init repo");
+        // The fixture checks out master explicitly; ignore the developer's init.defaultBranch.
+        let mut init = git2::RepositoryInitOptions::new();
+        init.initial_head("master");
+        let repo = Repository::init_opts(temp_dir.path(), &init).expect("failed to init repo");
 
         let mut checkout = CheckoutBuilder::new();
         checkout.force();

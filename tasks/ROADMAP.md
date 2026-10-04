@@ -1,6 +1,10 @@
 # KazeNhanh 開発ロードマップ
 
-取り組むべき次のタスク : （全タスク完了）
+取り組むべき次のタスク : 再設計計画 P0（検証基盤復旧）→ P1（評価契約・責務分離）→ P2（一次検出MVP）
+
+2026-10-04: [再設計監査・計画](../docs/KZN-REDESIGN-PLAN-001.md)を作成。[監査タスク](task-redesign-001-text-evaluation-audit.md)はcompleted、[移行タスク](task-redesign-002-text-evaluation-migration.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0に着手。P1〜P5は未着手。以下の9件・44件は旧Git/要約機能の履歴であり、新基盤の進捗や検証済み品質を示しません。
+
+## 旧Git・要約機能のタスク記録
 完了タスク件数 / 総タスク件数 : 9 / 9
 完了サブタスク件数 / 総サブタスク件数 : 44 / 44 （進捗率: 100%）
 

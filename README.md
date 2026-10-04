@@ -2,10 +2,10 @@
 
 ![KazeNhanh Mascot](docs/img/KazeNhanh.png)
 
-KazeNhanh は、Git の変更差分と軽量推論パイプラインを組み合わせてドキュメントを要約・可視化するための Rust ライブラリです。GitNativeRAG、HybridSummarizer、NLP/Markdown 基盤サービスを統合し、プロダクション品質のテストと CI を備えています。
+KazeNhanh は、Git の変更差分と軽量推論パイプラインを組み合わせてドキュメントを要約・可視化するための Rust ライブラリです。GitNativeRAG、HybridSummarizer、NLP/Markdown 基盤サービスを統合し、テキスト妥当性評価基盤への移行を進めています。現在の検証範囲は[開発環境手順](docs/development-setup.md)を参照してください。
 
 ## プロジェクト概要
-- Rust 1.75+ で動作するライブラリ (`kaze_nhanh`) を提供
+- Rust stableを対象とするライブラリ (`kaze_nhanh`) を提供
 - Git 差分収集・Markdown 構造解析・Sudachi ベースの日本語 NLP を統合
 - HybridSummarizer と GitNativeRAG パイプラインで差分要約や合成要約を生成
 - ThreadSanitizer や Criterion/ソークテストを含む CI パイプラインで品質保証
@@ -19,8 +19,11 @@ KazeNhanh は、Git の変更差分と軽量推論パイプラインを組み合
 
 ## 迅速な利用開始
 
+開発PCの準備は[セットアップ手順](docs/development-setup.md)を参照してください。Cargo依存と固定Sudachi辞書を取得するPowerShellスクリプトを用意しています。
+
+
 ### 依存関係
-- Rust 1.75 以降 (Rustup 推奨)
+- Rust stable (Rustup推奨、今回の検証は1.99.0。最低対応版は未検証)
 - Sudachi 辞書 (`system.dic`) と設定 (`sudachi.json`) をインメモリで取り扱うためのバイナリ
 - (任意) GGUF 形式のモデルファイル — モック実装は同梱されており、実モデルは別途取得してください
 
@@ -102,6 +105,8 @@ Sudachi 辞書はライセンスの都合で同梱していません。利用時
 - `docs/` : 詳細設計や利用ガイド
 
 ## 開発進捗
+- 2026-10-04: [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)を起票し、P0に着手。セットアップとテスト登録を整備し、Windowsで実辞書・結合・並行性テストが成功。[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md)。
+- 2026-10-04: [テキスト妥当性評価基盤への再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)を作成。実装は未着手。既存の結合テスト登録・実モデル検証に課題があり、旧来の品質表記は同計画の監査結果と併せて参照してください。
 - 2025-11-08: ThreadSanitizer ジョブのテストフィルタを修正し、並行性テスト実行を安定化。
 - 2025-11-08: デモ用Gitリポジトリ (`task-demo-001-git-sample-repo`) を整備し、Tauriデモで使用するブランチ・タグ・衝突シナリオを追加。
 - 2025-11-08: CI/CD 統合 (`subtask-testing-001-06-ci`) を完了し、テスト・ThreadSanitizer・性能計測を自動化。
@@ -128,10 +133,10 @@ KazeNhanh は Rust コミュニティと Sudachi/Candle エコシステムの恩
 
 ![KazeNhanh Mascot](docs/img/KazeNhanh.png)
 
-KazeNhanh is a Rust library that fuses Git diff analysis with lightweight inference pipelines to summarize and surface documentation changes. It bundles GitNativeRAG, HybridSummarizer, and shared NLP/Markdown services, backed by production-grade testing and CI automation.
+KazeNhanh is a Rust library that fuses Git diff analysis with lightweight inference pipelines to summarize and surface documentation changes. It bundles GitNativeRAG, HybridSummarizer, and shared NLP/Markdown services, with a migration toward local text evaluation underway. See [development setup](docs/development-setup.md) for the current validation scope.
 
 ## Overview
-- Ships the `kaze_nhanh` library targeting Rust 1.75+
+- Ships the `kaze_nhanh` library targeting Rust stable
 - Unifies Git diff collection, Markdown structure analysis, and Sudachi-based Japanese NLP
 - Generates diff summaries and synthesized reports via HybridSummarizer and GitNativeRAG pipelines
 - Ensures quality with CI jobs covering ThreadSanitizer, Criterion benchmarks, and soak testing
@@ -228,6 +233,8 @@ Sudachi dictionaries are not bundled for licensing reasons. Obtain the official 
 - `docs/`: design notes and usage guides
 
 ## Project Progress
+- 2026-10-04: Started [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2), added reproducible Sudachi setup and registered integration/concurrency tests; local Windows verification passed. P0 remains in progress.
+- 2026-10-04: Added the [text evaluation redesign audit and plan](docs/KZN-REDESIGN-PLAN-001.md). Implementation has not started. The audit identifies gaps in integration-test registration and real-model validation; read earlier quality claims alongside these findings.
 - 2025-11-08: Completed CI/CD integration (`subtask-testing-001-06-ci`) with automated tests, ThreadSanitizer, and performance runs
 - 2025-11-07: Finalized performance/soak tooling (`subtask-testing-001-05-performance`) and published Criterion + soak workflows
 - 2025-11-07: Delivered GitNativeRAG pipeline (`task-pipeline-002-git-native-rag`) enabling diff-to-summary flows

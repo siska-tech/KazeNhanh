@@ -1,16 +1,17 @@
+#[path = "../common/mod.rs"]
+mod common;
+
 use std::error::Error as StdError;
 use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use git2::{Repository, Signature, Time};
-use kaze_nhanh::{
-    EngineConfig, GitNativeRagContent, GitNativeRagReport, GitReportOptions, KazeNhanhEngine,
-};
+use kaze_nhanh::{GitNativeRagContent, GitReportOptions, KazeNhanhEngine};
 use tempfile::TempDir;
 
 fn test_engine() -> KazeNhanhEngine {
-    let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
+    let config = common::nlp_config();
     KazeNhanhEngine::new(config).expect("engine should initialize with mock assets")
 }
 
@@ -19,7 +20,12 @@ fn git_report_includes_markdown_additions() -> Result<(), Box<dyn StdError>> {
     let temp_dir = TempDir::new()?;
     let repo = Repository::init(temp_dir.path())?;
 
-    commit_markdown(&repo, "docs/guide.md", "# Guide\n\n- intro\n", past_seconds(7200))?;
+    commit_markdown(
+        &repo,
+        "docs/guide.md",
+        "# Guide\n\n- intro\n",
+        past_seconds(7200),
+    )?;
     commit_markdown(
         &repo,
         "docs/guide.md",
@@ -50,7 +56,12 @@ fn git_native_rag_synthesizes_summary_for_changes() -> Result<(), Box<dyn StdErr
     let temp_dir = TempDir::new()?;
     let repo = Repository::init(temp_dir.path())?;
 
-    commit_markdown(&repo, "docs/changelog.md", "# Title\n\n- original\n", past_seconds(6400))?;
+    commit_markdown(
+        &repo,
+        "docs/changelog.md",
+        "# Title\n\n- original\n",
+        past_seconds(6400),
+    )?;
     commit_markdown(
         &repo,
         "docs/changelog.md",
@@ -70,7 +81,10 @@ fn git_native_rag_synthesizes_summary_for_changes() -> Result<(), Box<dyn StdErr
     let report = engine.run_git_native_rag(&options)?;
 
     match report.content {
-        GitNativeRagContent::Synthesized { ref prompt, ref summary } => {
+        GitNativeRagContent::Synthesized {
+            ref prompt,
+            ref summary,
+        } => {
             assert!(prompt.contains("docs/changelog.md"));
             assert!(prompt.contains("Highlight user-facing changes"));
             assert!(summary.contains("mock-bytes"));
@@ -146,4 +160,3 @@ fn past_seconds(seconds: i64) -> Time {
         .as_secs() as i64;
     Time::new(now - seconds, 0)
 }
-
