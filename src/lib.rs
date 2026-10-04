@@ -36,3 +36,6 @@ pub fn japanese_engine_with_profile(
     )?
     .with_primary_detector(std::sync::Arc::new(rules)))
 }
+
+#[cfg(feature = "qwen")]
+pub use kaze_nhanh_qwen::{QwenJudgeConfig, QwenNaturalnessFactory};

@@ -14,14 +14,17 @@ try {
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--lib') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--no-default-features', '--lib') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('check', '--locked', '-p', 'kaze_nhanh_legacy', '--lib') + $networkArgs)
-    foreach ($mode in @('core', 'default', 'minimal')) {
+    Invoke-KazeCargo -CargoArguments (@('check', '--locked', '--no-default-features', '--features', 'qwen', '--lib') + $networkArgs)
+    foreach ($mode in @('core', 'default', 'minimal', 'qwen')) {
         $treeArgs = @('tree', '--locked', '--edges', 'normal') + $networkArgs
         if ($mode -eq 'core') { $treeArgs += @('-p', 'kaze_nhanh_core') }
         if ($mode -eq 'minimal') { $treeArgs += '--no-default-features' }
+        if ($mode -eq 'qwen') { $treeArgs += @('--no-default-features', '--features', 'qwen') }
         $tree = & (Get-KazeCargo) @treeArgs
         if ($LASTEXITCODE -ne 0) { throw "Cannot inspect $mode dependencies." }
         $forbidden = '(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|saku|tokenizers) v'
         if ($mode -ne 'default') { $forbidden = '(git2|pulldown-cmark|candle-core|candle-nn|candle-transformers|saku|tokenizers|sudachi|kaze_nhanh_sudachi) v' }
+        if ($mode -eq 'qwen') { $forbidden = '(git2|pulldown-cmark|saku|sudachi|kaze_nhanh_legacy) v' }
         if (($tree -join "`n") -match $forbidden) { throw "Unexpected backend/legacy dependency in $mode." }
     }
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '-p', 'kaze_nhanh_core') + $networkArgs)

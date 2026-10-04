@@ -1116,6 +1116,7 @@ dependencies = [
  "git2",
  "kaze_nhanh_core",
  "kaze_nhanh_legacy",
+ "kaze_nhanh_qwen",
  "kaze_nhanh_sudachi",
  "serde",
  "serde_json",
@@ -1150,6 +1151,19 @@ dependencies = [
  "thiserror",
  "tokenizers",
  "tracing",
+]
+
+[[package]]
+name = "kaze_nhanh_qwen"
+version = "0.2.0"
+dependencies = [
+ "candle-core",
+ "candle-transformers",
+ "kaze_nhanh_core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokenizers",
 ]
 
 [[package]]

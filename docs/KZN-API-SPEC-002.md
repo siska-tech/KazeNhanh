@@ -41,3 +41,5 @@ japanese_engine(SudachiConfig, EvaluationConfig)でSudachiを組み立てる。S
 標準profileの必須軸はvalidity/naturalness。意味軸は未評価で合格へ変換しない。ja.llm.v1はreference scopeと意味軸を必須にする。profile_config・metrics.morphologyを含むschema v3へ更新。[ルール・scoreの範囲とCLI](primary-detection.md)を参照。
 
 P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。
+
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。

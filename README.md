@@ -60,7 +60,7 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 - 2026-10-04: P1完了。ユーザー承認後にcore/Sudachi/legacyをworkspaceへ分離し、0.2へ切替。モデル不要の標準facade、最小feature、legacy互換と移行ガイドを整備。
 - 2026-10-04: P0完了。実辞書、明示fake注入、学習済みGGUF CPU生成、公式tokenizer参照ID、CI成果物を検証。
-- P3進行中: 選択的worker・遅延load・有界queue・共有呼出予算・deadline・厳格出力/保留の契約を実装。優先用途はOCR/ASR。実モデルadapterと日本語品質/CPU SLO検証は残作業。[二次判定の契約](docs/secondary-judging.md)。
+- P3進行中: 選択的worker・遅延load・有界queue・共有呼出予算・deadline・厳格出力/保留の契約を実装。優先用途はOCR/ASR。実験用Qwen自然さadapterを追加し、日本語品質/意味adapter/CPU SLO検証は残作業。[二次判定の契約](docs/secondary-judging.md)。
 
 [移行タスク](tasks/task-redesign-002-text-evaluation-migration.md) / [ロードマップ](tasks/ROADMAP.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2) / [Draft PR #3](https://github.com/siska-tech/KazeNhanh/pull/3)
 
@@ -74,4 +74,6 @@ core/default/minimalの依存境界、原文/span/未評価/schema契約、モ�
 
 KazeNhanh 0.2 is a local, detection-first text evaluation foundation. P1 separates the backend-independent core, owned Sudachi adapter and optional legacy Git/Markdown/generation APIs. The default build needs no language model; `default-features = false` exposes only the core facade.
 
-P2 includes explainable primary screening and profiles. Semantic consistency remains unassessed; unresolved candidates are explicitly held with the secondary judge disabled. Heuristic scores are not calibrated probabilities. P3 now provides an opt-in bounded lazy worker and strict secondary protocol; the real model adapter and Japanese acceptance remain pending. P4 adds calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).
+P2 includes explainable primary screening and profiles. Semantic consistency remains unassessed; unresolved candidates are explicitly held with the secondary judge disabled. Heuristic scores are not calibrated probabilities. P3 now provides an opt-in bounded lazy worker and strict secondary protocol; an experimental Qwen naturalness adapter is available, while Japanese quality/semantic adapter/CPU SLO acceptance remain pending. P4 adds calibration and quality acceptance. Legacy APIs require the `legacy` feature or direct use of kaze_nhanh_legacy. See the [migration guide](docs/migration-0.2.md).
+
+2026-10-04: 実験用Qwen CPU自然さadapterを独立optional crate/qwen featureへ追加。固定GGUF/tokenizer、独立参照、選択的CPU smokeを実装。P3は品質/意味adapter/CPU SLO未受入のためprogress。[手順と限界](docs/qwen-judge.md)。

@@ -86,3 +86,5 @@ TSanジョブはRust公式の[Sanitizer手順](https://doc.rust-lang.org/unstabl
 ## P2 baseline
 
 cargo run --locked --offline --example primary_baseline -- evaluation/primary-baseline.jsonl target/p2-baselineで34件の手作業fixtureを検証し、JSON reportと集計を保存する。CIではWindows/Linuxの成果物を保存。[一次検出の範囲](primary-detection.md)も参照。
+
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。

@@ -157,3 +157,17 @@ backend非依存のSecondaryJudge/Factory、遅延load・有界worker、共有�
 - [ ] OCR/ASR品質・CPU latency/RSS/呼出率・事前SLO受入
 
 ユーザー指定の優先用途はOCR/ASRの不自然さ検出。P3はprogressを維持し、実モデル試験をfakeの成功で代替しない。[制御契約と残作業](../docs/secondary-judging.md)。非協調backendの実行中処理をtimeoutで強制停止する保証はない。最新CIはpush後に確認する。
+## P3実モデルadapter着手（2026-10-04）
+
+OCR/ASR自然さ専用Qwen CPU adapterを独立optional crateへ追加。公式固定GGUF/tokenizer/config/licenseをhash検証。paired-label single-forward scoreは未校正、意味軸非対応。実CPU smoke・独立token ID・context/KV/timeout境界を検証する。P3全体はprogress。
+
+### P3実験用adapterの検証記録
+
+- [x] 独立optional Qwen CPU crate/qwen feature。default/minimal/coreへモデル依存を混入させない
+- [x] 公式Qwen2.5-0.5B-Instruct Q4_K_M（491,400,032 bytes）・tokenizer/config/template/LICENSEをrevision/hash固定。online取得、offline再利用、破損cache拒否
+- [x] Python公式chat templateの独立4参照をRustの全raw/prompt token IDと照合
+- [x] 実CPU releaseで正常呼出0、異常候補完了、異なるprompt後のscore再実行一致、context超過保留
+- [x] verify.ps1 -Offline成功。workspace116件（以前の113＋Qwen単体3）、qwen-only依存境界も検証
+- [x] 専用セットアップ/verifyスクリプトと独立CPU CI、JSON成果物を追加
+
+品質結果: 異常3例のnaturalnessは反復0.99986/文字化け0.82134/括弧欠落0.99728で、いずれも暫定0.5以上。この候補のOCR/ASR判定品質は未受入。一次warningは消さず、scoreを確率・採用済品質と称さない。14〜17秒/候補はローカルrelease smokeの参考値でSLOではない。P3全体はprogress。意味adapter・実OCR/ASR品質・CPU SLOを残す。[実験用adapter](../docs/qwen-judge.md)。最終版CPU/CI結果はIssue/PRにも記録する。

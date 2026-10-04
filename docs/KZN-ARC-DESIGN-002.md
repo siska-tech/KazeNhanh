@@ -28,3 +28,5 @@ P1で検出精度を保証せず、未実装の判定はundetermined/null/全文
 coreのPrimaryRules/DomainProfile/MorphologyFeaturesを標準Sudachi facadeへ注入。入力制約・文字/形態素反復等を検出し、意味軸は未評価のまま二次候補にする。SLM backendは持たず呼出0。評価fixture runnerは開発exampleへ分離し、通常runtimeにdatasetや学習依存を含めない。[一次検出仕様](primary-detection.md)。
 
 P3制御契約: coreにSecondaryJudge/Factory/Workerを追加。任意Arc workerは1thread/有界queueで遅延loadし、共有呼出予算・deadline・厳格出力検証で保留する。新規モデル依存は追加しない。実CPUモデルadapterは別backendとして未実装。[詳細と同期backendの限界](secondary-judging.md)。
+
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。

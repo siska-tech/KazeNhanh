@@ -54,8 +54,10 @@ kaze_nhanh = { path = "/path/to/KazeNhanh", default-features = false, features =
 | no-default + legacy | 有効 | 無効 | 有効 | 旧APIの互換利用 |
 | mock_inference | 有効 | defaultに従う | 有効 | 明示fake workflow試験 |
 
-mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ切り替えない。P3のSecondaryJudge/Factory/Workerはbackend非依存契約として利用できる。実SLM adapterは未実装で、legacy推論featureを新評価エンジンへ接続しない。
+mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ切り替えない。P3のSecondaryJudge/Factory/Workerはbackend非依存契約として利用できる。実験用自然さadapterはqwen featureで明示利用し、legacy推論featureを新評価エンジンへ接続しない。
 
 `verify.ps1 -Offline`はcore/default/minimalの依存禁止、実Sudachi、Modeと原文span、並行評価、旧本番runtime、fake workflow、全workspace試験を確認する。辞書はsetup-dev.ps1で事前取得する。
 
 P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。
+
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。

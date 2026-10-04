@@ -35,3 +35,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-04: P2一次検出MVPを実装。profile・形態素features・説明可能rules、4用途共通APIとJSON runner。34 fixture全期待一致、正常19件の誤警報0、意味保留4件、SLM呼出0。[検出範囲](../docs/primary-detection.md)。
 
 2026-10-04: P3の選択的二次worker・遅延load・共有予算・deadline・有界queue・厳格出力と保留を実装。優先はOCR/ASR。実モデル日本語judge/tokenizer bundle/CPU SLOは未完了。[制御契約](../docs/secondary-judging.md)。
+
+2026-10-04: P3実験用Qwen自然さadapter・固定資産setup・独立token ID照合・CPU smokeを追加。P3全体の品質/意味adapter/SLO受入は未完了。[adapter](../docs/qwen-judge.md)。

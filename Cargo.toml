@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/core", "crates/sudachi", "crates/legacy"]
+members = ["crates/core", "crates/sudachi", "crates/legacy", "crates/qwen"]
 resolver = "2"
 
 [package]
@@ -10,10 +10,12 @@ edition = "2021"
 [features]
 default = ["sudachi"]
 sudachi = ["dep:kaze_nhanh_sudachi"]
+qwen = ["dep:kaze_nhanh_qwen"]
 legacy = ["dep:kaze_nhanh_legacy", "dep:tokenizers", "dep:git2"]
 mock_inference = ["legacy", "kaze_nhanh_legacy/mock_inference"]
 
 [dependencies]
+kaze_nhanh_qwen = { path = "crates/qwen", version = "0.2.0", optional = true }
 kaze_nhanh_core = { path = "crates/core", version = "0.2.0" }
 kaze_nhanh_sudachi = { path = "crates/sudachi", version = "0.2.0", optional = true }
 kaze_nhanh_legacy = { path = "crates/legacy", version = "0.1.0", optional = true }
@@ -62,3 +64,7 @@ required-features = ["mock_inference"]
 name = "thread_safety"
 path = "tests/concurrency/thread_safety.rs"
 required-features = ["mock_inference"]
+
+[[example]]
+name = "judge_smoke"
+required-features = ["sudachi", "qwen"]

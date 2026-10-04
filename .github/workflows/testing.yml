@@ -80,6 +80,33 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
 
+  qwen-judge:
+    name: Experimental Japanese Qwen CPU Judge
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v2
+      - name: Prepare dictionary and pinned Qwen bundle
+        shell: pwsh
+        run: |
+          ./scripts/dev/setup-dev.ps1
+          ./scripts/dev/setup-judge.ps1
+      - name: Check official token IDs and selective CPU classification
+        shell: pwsh
+        run: ./scripts/dev/verify-judge.ps1 -Offline
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qwen-judge-smoke
+          path: target/judge-smoke-release.json
+          if-no-files-found: error
+
   trained-model:
     name: Trained GGUF CPU & Official Tokenizer Smoke
     runs-on: ubuntu-latest

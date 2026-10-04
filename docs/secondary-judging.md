@@ -1,6 +1,6 @@
 # P3選択的二次判定の制御契約
 
-2026-10-04。優先用途はユーザー指定の日本語OCR/ASRの不自然さ検出。今回実装したのはbackend非依存の実行制御と契約。実モデルbackend・日本語品質・context token照合・CPU SLOは未完了であり、P3全体を完了にしない。
+2026-10-04。優先用途はユーザー指定の日本語OCR/ASRの不自然さ検出。今回実装したのはbackend非依存の実行制御と契約。実験用Qwen自然さbackendを追加したが、意味adapter・日本語品質・CPU SLOは未受入であり、P3全体を完了にしない。
 
 ## 接続
 
@@ -44,6 +44,7 @@ Report schemaはkzn.evaluation.v3。context_missing/invalid_outputのrouting状�
 残作業:
 
 - 固定revision/hash/license付きmodel+tokenizer+chat template bundleを別セットアップで取得し、offline再利用・不一致拒否・独立token IDを照合。
-- 実CPU adapterを新backendへ実装し、全文入力を黙って切り捨てずcontext/token予算を拒否、request間KV初期化、deadline協調を確認。
+- 実験用自然さadapterの実データ検証、意味adapter、request間KV・deadline協調の運用制約を受入確認。
 - 日本語OCR/ASRの正常文・固有名詞・filler・短文・実認識誤りで実モデル試験。prompt injection/不正JSONを保留する。
 - 対象CPU/RAM/thread数・入力長を固定し、cold/warm latency/RSSと呼出率を測定。CPU SLOと品質受入を事前に定義する。
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。
