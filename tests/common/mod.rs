@@ -1,10 +1,10 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use kaze_nhanh::EngineConfig;
 
 // Only tests keep this allocation for the process lifetime, as required by the
-// existing static EngineConfig API. Production resource ownership is P1 work.
+// legacy static EngineConfig API. The 0.2 evaluation backend owns its resources.
 pub fn nlp_config() -> EngineConfig {
     static DICTIONARY: OnceLock<Vec<u8>> = OnceLock::new();
     let dictionary = DICTIONARY.get_or_init(|| {

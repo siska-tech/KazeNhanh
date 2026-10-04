@@ -28,6 +28,6 @@ P0完了: 明示fake注入、実辞書・合成/学習済みGGUFのCPU推論、�
 
 
 
-P1進行中: 独立coreの8契約試験が成功。0.1互換を保った評価APIの追加を実装。Sudachi/legacy分離・0.2 API変更は自動承認レビューによる明示承認待ち。[API仕様002](../docs/KZN-API-SPEC-002.md)。
+P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature境界を検証。[API仕様002](../docs/KZN-API-SPEC-002.md)。
 
 2026-10-04: ユーザーの明示承認後にcore/Sudachi/legacyをCargo workspaceへ分離し、0.2へ切替。P1完了。default/minimalの依存境界とモデル不要起動、owned辞書・Mode・原文span・並行評価、旧APIの回帰を検証。[0.2移行ガイド](../docs/migration-0.2.md)。以前の承認待ち記録は解消済み。

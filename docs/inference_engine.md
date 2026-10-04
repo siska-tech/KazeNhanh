@@ -77,7 +77,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify-model.ps1
 
 runnerは資産SHA256を表示し、参照ID照合、本番ロード、生成が空でないこと、同じpromptの再実行で同じ出力が得られることを確認。出力と各推論の時間をJSON行として標準出力へ返す。モデルやtokenizerの自動取得はしない。
 
-このrunnerは言語品質の自動合否・p95/RSS計測を含まない。P0ではSmolLM2-135M-Instruct Q4_K_M（105,454,432 bytes、Apache-2.0）を互換性確認用に使用する。公式tokenizerとGGUF変換元のrevision・SHA256をresources/models/smollm2.lock.jsonに固定。日本語judgeとしての採用を意味しない。ライフタイムがstaticの旧EngineConfigへ合わせ、CLIの資産bytesはプロセス終了まで保持する。owned資産への移行はP1で扱う。
+このrunnerは言語品質の自動合否・p95/RSS計測を含まない。P0ではSmolLM2-135M-Instruct Q4_K_M（105,454,432 bytes、Apache-2.0）を互換性確認用に使用する。公式tokenizerとGGUF変換元のrevision・SHA256をresources/models/smollm2.lock.jsonに固定。日本語judgeとしての採用を意味しない。ライフタイムがstaticの旧EngineConfigへ合わせ、CLIの資産bytesはプロセス終了まで保持する。0.2の新評価Sudachiはowned資産を使用するが、このlegacy CLIは0.1のstatic資産契約を維持する。
 
 固定fixtureの取得・検証:
 
