@@ -238,3 +238,7 @@ R2先行実装として、明示的opt-inのraw候補不一致review policyを�
 ## 18. 軽量統計review（2026-10-05）
 
 OOV＋未観測文字bigram＋未観測語bigramのsegment共起を明示opt-inでreviewへ回す実験policyを追加。候補reviewとORで併用可能、risk=null・低リスク未採用・モデル不要を維持。[仕様](recognition-sparse-review.md)。品質改善や学習fusionの完了とは扱わない。ユーザー方針により、追加サンプルは必要な用途/件数/形式を伝えて依頼し、ASRの実行や外部データ収集を実装の前提にしない。
+
+## 19. POS bigram特徴（2026-10-05）
+
+全POS vectorの隣接頻度/未観測率/原文spanをv2統計assetに追加。旧v1読込・生成を維持し、品詞欠測とコーパス未観測を分離する。[契約](recognition-pos-statistics.md)。既定/実験判定は変更せず、追加の語列特徴として3辞書比較する。学習fusion・source policy・品質受入は未完了でR2はprogress。

@@ -19,6 +19,17 @@ try {
     if ($assetHash -ne (Get-FileHash -Algorithm SHA256 -LiteralPath $againPath).Hash.ToLowerInvariant()) {
         throw 'Statistics asset generation is not reproducible.'
     }
+    $posAsset = Join-Path $outputRoot 'contract-pos.json'
+    $posAgain = Join-Path $outputRoot 'contract-pos-again.json'
+    foreach ($path in @($posAsset,$posAgain)) {
+        Invoke-KazeCargo -CargoArguments (@('run','--locked','--example','statistics_asset') + $networkArgs + @('--',
+            'tests/fixtures/statistics/clean-contract.jsonl','authored-contract-v1','contract_fixture','CC0-1.0',$path,'--with-pos'))
+    }
+    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $posAsset).Hash -ne (Get-FileHash -Algorithm SHA256 -LiteralPath $posAgain).Hash) {
+        throw 'POS asset generation is not reproducible.'
+    }
+    $pos = Get-Content -LiteralPath $posAsset -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($pos.schema_version -ne 'kzn.statistics.v2' -or $pos.pos.pair_count -le 0 -or $pos.pos.missing_pair_count -ne 0) { throw 'Expected complete Sudachi POS pairs.' }
     $summaries = @()
     # User-derived reports remain local: CI verifies synthetic contracts only.
     if ($env:CI -ne 'true') {

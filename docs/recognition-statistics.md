@@ -21,7 +21,7 @@
 
 Coreはファイル取得やhash計算をしない。外部資産の真正性は呼出側で確認する。提供runnerは**指定asset SHA256**を読み込んだbytesと照合してから検証/使用する。reportのprovenance.sha256はファイルhash未提供のためnull、観測payloadにはcorpus hashを保持する。検証summaryにはasset file hashも記録する。hash一致は資産同一性の確認で、コーパス品質・適用性能の証明ではない。
 
-資産は3表合計100,000 entries、key 4,096 bytes、fitは10,000 segments・各65,536 bytesに制限。builder CLIは8 MiB/4,096 segments、runnerのasset入力も8 MiBに制限。未観測位置は系列ごと最大64件、省略数と全件カウントは保持する。比較はraw文字を用いる。文字種遷移/POS統計、条件付きsurprisal、融合重み、閾値は未実装。core依存はserde/serde_json/thiserrorのまま。
+資産は3表合計100,000 entries、key 4,096 bytes、fitは10,000 segments・各65,536 bytesに制限。builder CLIは8 MiB/4,096 segments、runnerのasset入力も8 MiBに制限。未観測位置は系列ごと最大64件、省略数と全件カウントは保持する。比較はraw文字を用いる。文字種遷移、条件付きsurprisal、学習した融合重み・閾値は未実装。POS統計は末尾の追記を参照。core依存はserde/serde_json/thiserrorのまま。
 
 ## オフライン利用
 
@@ -47,3 +47,5 @@ verify.ps1へ統合済み。統計生成・hash拒否をCIでも確認する。�
 辞書比較: small/core/fullを同版で固定し、統計assetを辞書別に再生成して同じ入力で比較する。builder/runnerは末尾に--dictionary pathを指定可能。asset IDに解析identityのdigestを含める。[実行手順と結果](sudachi-dictionary-matrix.md)。
 
 2026-10-05追記: [軽量統計review](recognition-sparse-review.md)を明示opt-inで追加。上記の判定不変は既定動作。OOV/未観測率を確率へ変換せず、三条件のsegment共起のみを実験的review根拠とする。
+
+2026-10-05追記: [POS bigram統計](recognition-pos-statistics.md)をfit_with_pos/--with-posで追加。v1資産は維持し、v2資産では4表合計のentry上限を適用する。品詞欠測と頻度未観測は別に返す。

@@ -286,3 +286,15 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 [仕様](../docs/recognition-sparse-review.md)。R2はprogress。追加サンプルはユーザーへ依頼し、ASR実行・外部収集を前提にしない。
 
 検証結果: core43件（追加3）とverify.ps1 -Offline成功、正常型番の誤警報を明示する実Sudachi試験も成功。3辞書とも15件中review3/保留12（確認済み不一致のreview1/4、参照未確認review2）。正常型番ZX-900Bにもreviewが出るため実験用を維持し、既定採用/品質受入はしない。
+
+## R2 POS bigram特徴（2026-10-05）
+
+- [x] 隣接全POS vector統計・欠測・原文span・64 event上限
+- [x] v2 asset明示生成、v1互換、全表entry上限とcanonical key/合計検証
+- [x] 欠測橋渡し防止・学習POSなし・改ざん/上限/文書境界・解析1回の5契約テスト
+- [x] builder --with-pos、辞書matrix -WithPos、v1/v2再現生成検証
+- [ ] POSを用いた判断条件・文字種特徴・source policy/fusion・品質受入
+
+[仕様](../docs/recognition-pos-statistics.md)。R2はprogress。追加サンプル取得やASR実行はしない。
+
+検証結果: core48件（追加5）・v1/v2再現生成・3辞書matrix・最小API/source/実Sudachi等が成功。verify最終workspaceのWindows EXEロックは比較終了後の単独再試験で成功。POS未観測はsmall34/46、core/full33/43、欠測0。既定15件保留、risk=null/SLM0を維持。v1 assetのbyte/hash一致、format/リンク/PowerShell構文も確認。前回e859d49のCIは成功。

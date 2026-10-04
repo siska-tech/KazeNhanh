@@ -394,3 +394,237 @@ fn combined_candidate_and_statistics_review_preserves_high_confidence_without_ov
     assert_eq!(report.decision, RecognitionDecision::Review);
     report.validate().unwrap();
 }
+
+fn pos_analysis(text: &str, tags: &[&str]) -> MorphAnalysis {
+    let mut result = analysis(text);
+    assert_eq!(result.morphemes.len(), tags.len());
+    for (token, tag) in result.morphemes.iter_mut().zip(tags) {
+        token.part_of_speech = if tag.is_empty() {
+            vec![]
+        } else {
+            vec![(*tag).into(), "*".into()]
+        };
+    }
+    result
+}
+fn pos_asset() -> StatisticsArtifact {
+    StatisticsArtifact::fit_with_pos(
+        asset().metadata,
+        &[(
+            "猫は犬".into(),
+            pos_analysis("猫は犬", &["名詞", "助詞", "名詞"]),
+        )],
+    )
+    .unwrap()
+}
+#[test]
+fn pos_pairs_use_full_vectors_and_do_not_bridge_missing_tags() {
+    let provider = LightweightStatistics::new(pos_asset()).unwrap();
+    let known = provider
+        .observe(
+            "猫は犬",
+            Some("fixture"),
+            &pos_analysis("猫は犬", &["名詞", "助詞", "名詞"]),
+        )
+        .unwrap();
+    assert_eq!(
+        known
+            .pos
+            .as_ref()
+            .unwrap()
+            .frequencies
+            .as_ref()
+            .unwrap()
+            .unseen_fraction,
+        Some(0.0)
+    );
+    let changed = provider
+        .observe(
+            "猫は犬",
+            Some("fixture"),
+            &pos_analysis("猫は犬", &["名詞", "動詞", "名詞"]),
+        )
+        .unwrap();
+    let pos = changed.pos.as_ref().unwrap();
+    assert_eq!(pos.available_pair_count, 2);
+    assert_eq!(pos.frequencies.as_ref().unwrap().unseen_count, 2);
+    assert_eq!(
+        pos.frequencies.as_ref().unwrap().unseen_events[0].span,
+        ByteSpan::new("猫は犬", 0, 6).unwrap()
+    );
+    changed
+        .validate("猫は犬", Some("fixture"), provider.artifact_id())
+        .unwrap();
+    let mut detailed = pos_analysis("猫は犬", &["名詞", "助詞", "名詞"]);
+    detailed.morphemes[1].part_of_speech[1] = "格助詞".into();
+    assert_eq!(
+        provider
+            .observe("猫は犬", Some("fixture"), &detailed)
+            .unwrap()
+            .pos
+            .unwrap()
+            .frequencies
+            .unwrap()
+            .unseen_count,
+        2
+    );
+    for missing in ["", "*"] {
+        let result = provider
+            .observe(
+                "猫は犬",
+                Some("fixture"),
+                &pos_analysis("猫は犬", &["名詞", missing, "名詞"]),
+            )
+            .unwrap();
+        let pos = result.pos.as_ref().unwrap();
+        assert_eq!(pos.missing_pair_count, 2);
+        assert_eq!(pos.available_pair_count, 0);
+        assert_eq!(pos.frequencies.as_ref().unwrap().unseen_fraction, None);
+        result
+            .validate("猫は犬", Some("fixture"), provider.artifact_id())
+            .unwrap();
+    }
+}
+#[test]
+fn legacy_assets_and_empty_pos_training_remain_distinct() {
+    let legacy = asset();
+    let json = serde_json::to_string(&legacy).unwrap();
+    assert!(!json.contains("\"pos\""));
+    let legacy: StatisticsArtifact = serde_json::from_str(&json).unwrap();
+    legacy.validate().unwrap();
+    let legacy_provider = LightweightStatistics::new(legacy).unwrap();
+    assert!(legacy_provider
+        .observe("猫", Some("fixture"), &analysis("猫"))
+        .unwrap()
+        .pos
+        .is_none());
+    let empty =
+        StatisticsArtifact::fit_with_pos(asset().metadata, &[("猫犬".into(), analysis("猫犬"))])
+            .unwrap();
+    let provider = LightweightStatistics::new(empty).unwrap();
+    let result = provider
+        .observe(
+            "猫犬",
+            Some("fixture"),
+            &pos_analysis("猫犬", &["名詞", "名詞"]),
+        )
+        .unwrap();
+    let pos = result.pos.as_ref().unwrap();
+    assert_eq!(pos.corpus_pair_count, 0);
+    assert_eq!(pos.available_pair_count, 1);
+    assert!(pos.frequencies.is_none());
+    result
+        .validate("猫犬", Some("fixture"), provider.artifact_id())
+        .unwrap();
+}
+#[test]
+fn pos_asset_and_observation_tampering_are_rejected() {
+    let good = pos_asset();
+    let mut bad = good.clone();
+    bad.pos = None;
+    assert!(bad.validate().is_err());
+    let mut bad = good.clone();
+    bad.schema_version = STATISTICS_SCHEMA.into();
+    assert!(bad.validate().is_err());
+    let mut bad = good.clone();
+    bad.pos.as_mut().unwrap().pair_count += 1;
+    assert!(bad.validate().is_err());
+    let mut bad = good.clone();
+    bad.pos.as_mut().unwrap().missing_pair_count = u64::MAX;
+    assert!(bad.validate().is_err());
+    let mut bad = good.clone();
+    let pos = bad.pos.as_mut().unwrap();
+    pos.pairs = BTreeMap::from([("[[\"名詞\"],[]]".into(), 2)]);
+    assert!(bad.validate().is_err());
+    let provider = LightweightStatistics::new(good).unwrap();
+    let report = provider
+        .observe(
+            "猫は犬",
+            Some("fixture"),
+            &pos_analysis("猫は犬", &["動詞", "動詞", "動詞"]),
+        )
+        .unwrap();
+    let mut bad = report.clone();
+    bad.pos.as_mut().unwrap().missing_pair_count = usize::MAX;
+    assert!(bad
+        .validate("猫は犬", Some("fixture"), provider.artifact_id())
+        .is_err());
+    let mut bad = report.clone();
+    bad.pos.as_mut().unwrap().frequencies = None;
+    assert!(bad
+        .validate("猫は犬", Some("fixture"), provider.artifact_id())
+        .is_err());
+    let mut bad = report;
+    bad.pos
+        .as_mut()
+        .unwrap()
+        .frequencies
+        .as_mut()
+        .unwrap()
+        .unseen_events[0]
+        .span = ByteSpan::new("猫は犬", 0, 0).unwrap();
+    assert!(bad
+        .validate("猫は犬", Some("fixture"), provider.artifact_id())
+        .is_err());
+}
+#[test]
+fn pos_event_limits_keep_counts_without_cross_document_pairs() {
+    let data = vec![
+        ("猫".into(), pos_analysis("猫", &["名詞"])),
+        ("犬".into(), pos_analysis("犬", &["名詞"])),
+    ];
+    let separate = StatisticsArtifact::fit_with_pos(asset().metadata, &data).unwrap();
+    assert_eq!(separate.pos.unwrap().pair_count, 0);
+    let provider = LightweightStatistics::new(pos_asset()).unwrap();
+    let text = "猫".repeat(100);
+    let result = provider
+        .observe(
+            &text,
+            Some("fixture"),
+            &pos_analysis(&text, &vec!["動詞"; 100]),
+        )
+        .unwrap();
+    let f = result.pos.as_ref().unwrap().frequencies.as_ref().unwrap();
+    assert_eq!(f.unseen_count, 99);
+    assert_eq!(f.unseen_events.len(), 64);
+    assert_eq!(f.omitted_event_count, 35);
+    result
+        .validate(&text, Some("fixture"), provider.artifact_id())
+        .unwrap();
+}
+
+#[test]
+fn pos_engine_roundtrip_shares_analysis_without_changing_decision() {
+    struct Tagged(Arc<AtomicUsize>);
+    impl MorphAnalyzer for Tagged {
+        fn analyze(&self, text: &str) -> Result<MorphAnalysis, EvaluationError> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(pos_analysis(text, &vec!["動詞"; text.chars().count()]))
+        }
+    }
+    let calls = Arc::new(AtomicUsize::new(0));
+    let engine = RecognitionEngine::new(
+        Arc::new(Tagged(calls.clone())),
+        RecognitionConfig::default(),
+    )
+    .unwrap()
+    .with_statistics(Arc::new(LightweightStatistics::new(pos_asset()).unwrap()));
+    let mut input = RecognitionInput::new("猫は犬", RecognitionSource::Asr, "d", "s");
+    input.domain = Some("fixture");
+    let report = engine.evaluate_recognition(input).unwrap();
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(report.decision, RecognitionDecision::Undetermined);
+    assert!(report.recognition_risk.value.is_none());
+    assert_eq!(report.metrics.slm_calls, 0);
+    let roundtrip: RecognitionReport =
+        serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
+    roundtrip.validate().unwrap();
+    let mut bad = report;
+    let row = bad
+        .evidence
+        .iter_mut()
+        .find(|e| e.kind == RecognitionEvidenceKind::LexicalStatistics)
+        .unwrap();
+    row.value.as_mut().unwrap()["pos"]["frequencies"]["unseen_fraction"] = serde_json::json!(0.0);
+    assert!(bad.validate().is_err());
+}

@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param([switch]$Offline)
+param([switch]$Offline, [switch]$WithPos)
 . (Join-Path $PSScriptRoot 'common.ps1')
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $repoRoot
@@ -8,7 +8,8 @@ try {
     if ($env:CI -eq 'true') { throw 'Dictionary matrix includes user-derived reports. Run locally; no CI upload is configured.' }
     $networkArgs = @()
     if ($Offline) { $networkArgs += '--offline' }
-    $outputRoot = 'target/dictionary-matrix'
+    $outputRoot = if ($WithPos) { 'target/dictionary-pos-matrix' } else { 'target/dictionary-matrix' }
+    $statisticsFlags = @(); if ($WithPos) { $statisticsFlags += '--with-pos' }
     New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
     $allCases = @{}
     $editions = @()
@@ -22,7 +23,7 @@ try {
             $dictionary, 'evaluation/candidate-review-contract.jsonl', (Join-Path $directory 'candidate-review-contract.json')))
         $asset = Join-Path $directory 'statistics.json'
         Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'statistics_asset') + $networkArgs + @('--',
-            'tests/fixtures/statistics/clean-contract.jsonl', 'authored-contract-v1', 'contract_fixture', 'CC0-1.0', $asset, '--dictionary', $dictionary))
+            'tests/fixtures/statistics/clean-contract.jsonl', 'authored-contract-v1', 'contract_fixture', 'CC0-1.0', $asset, '--dictionary', $dictionary) + $statisticsFlags)
         $assetHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $asset).Hash.ToLowerInvariant()
         $dictionaryHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $dictionary).Hash.ToLowerInvariant()
         $counts = [ordered]@{ morphemes = 0; oov = 0; review = 0; undetermined = 0; low_risk = 0; statistics_observed = 0 }
@@ -63,6 +64,7 @@ try {
                     character_pairs = $statistics.value.character_pairs
                     words = $statistics.value.words
                     word_pairs = $statistics.value.word_pairs
+                    pos_pairs = if ($WithPos) { $statistics.value.pos } else { $null }
                 }
             }
         }
@@ -93,7 +95,7 @@ try {
             decision_changed = ($variants.small.decision -ne $variants.core.decision -or $variants.small.decision -ne $variants.full.decision) }
     }
     $result = [ordered]@{ schema_version = 'kzn.dictionary.matrix.v1'; case_count = $comparison.Count
-        quality_accepted = $false; corpus_role = 'synthetic_contract_fixture_only'; gold_used_for_inference = $false
+        pos_enabled = $WithPos.IsPresent; quality_accepted = $false; corpus_role = 'synthetic_contract_fixture_only'; gold_used_for_inference = $false
         editions = $editions; comparison = $comparison; hard_clean_comparison = $hardCleanCases }
     [IO.File]::WriteAllText((Join-Path $repoRoot "$outputRoot/summary.json"), ($result | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
     $editions | ForEach-Object { Write-Host ("{0}: morphemes={1}, OOV={2}, review={3}, undetermined={4}" -f $_.edition, $_.counts.morphemes, $_.counts.oov, $_.counts.review, $_.counts.undetermined) }

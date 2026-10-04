@@ -59,3 +59,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 2026-10-05: [評価データsplit監査と公開サンプル取得](../docs/recognition-datasets.md)を追加。人工fixtureと実測を区別し、実OCR/ASR集合の採用・融合判定は引き続きR2の残作業。
 
 2026-10-05: [軽量統計review baseline](../docs/recognition-sparse-review.md)を実装。既定は保留を維持し、明示有効時のみ三条件共起をreview。候補不一致とのOR統合、risk=null。独立評価/fusionの受入は継続。
+
+2026-10-05: [POS bigram特徴](../docs/recognition-pos-statistics.md)を追加。既存解析を共有し、欠測tokenを跨がず、学習POSなしは未評価。3辞書比較をv1とは別出力へ保存。R2判定・品質受入は継続。

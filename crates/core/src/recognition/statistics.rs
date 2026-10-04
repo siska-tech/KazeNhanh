@@ -2,6 +2,10 @@
 use super::*;
 use std::collections::BTreeMap;
 
+mod pos;
+pub use pos::*;
+pub const STATISTICS_POS_SCHEMA: &str = "kzn.statistics.v2";
+
 pub const STATISTICS_SCHEMA: &str = "kzn.statistics.v1";
 const MAX_ENTRIES: usize = 100_000;
 const MAX_KEY_BYTES: usize = 4096;
@@ -32,6 +36,8 @@ pub struct StatisticsArtifact {
     pub words: BTreeMap<String, u64>,
     /// Keys are canonical JSON arrays of two dictionary-form strings.
     pub word_pairs: BTreeMap<String, u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pos: Option<PosStatisticsArtifact>,
 }
 fn invalid(reason: &str) -> EvaluationError {
     EvaluationError::InvalidConfig(format!("statistics artifact: {reason}"))
@@ -83,10 +89,20 @@ impl StatisticsMetadata {
 impl StatisticsArtifact {
     pub fn validate(&self) -> Result<(), EvaluationError> {
         self.metadata.validate()?;
-        if self.schema_version != STATISTICS_SCHEMA || self.document_count == 0 {
+        if self.document_count == 0
+            || !matches!(
+                (self.schema_version.as_str(), self.pos.is_some()),
+                (STATISTICS_SCHEMA, false) | (STATISTICS_POS_SCHEMA, true)
+            )
+        {
             return Err(invalid("unsupported schema or empty corpus"));
         }
-        if self.character_pairs.len() + self.words.len() + self.word_pairs.len() > MAX_ENTRIES {
+        if self.character_pairs.len()
+            + self.words.len()
+            + self.word_pairs.len()
+            + self.pos.as_ref().map_or(0, |pos| pos.pairs.len())
+            > MAX_ENTRIES
+        {
             return Err(invalid("entry limit exceeded"));
         }
         for (table, total) in [
@@ -111,6 +127,9 @@ impl StatisticsArtifact {
             || self.word_pair_count > self.word_count
         {
             return Err(invalid("invalid character/word pair"));
+        }
+        if let Some(pos) = &self.pos {
+            pos.validate(self.word_pair_count)?;
         }
         let mut outgoing: BTreeMap<&str, u64> = BTreeMap::new();
         let mut incoming: BTreeMap<&str, u64> = BTreeMap::new();
@@ -144,6 +163,17 @@ impl StatisticsArtifact {
         }
         Ok(())
     }
+    /// Fit version 2 with POS pairs while preserving the legacy version-1 fitting API.
+    pub fn fit_with_pos(
+        metadata: StatisticsMetadata,
+        documents: &[(String, MorphAnalysis)],
+    ) -> Result<Self, EvaluationError> {
+        let mut asset = Self::fit(metadata, documents)?;
+        asset.pos = Some(PosStatisticsArtifact::fit(documents)?);
+        asset.schema_version = STATISTICS_POS_SCHEMA.into();
+        asset.validate()?;
+        Ok(asset)
+    }
     /// Training utility: caller supplies clean texts separately from evaluation inputs.
     /// Neither gold labels nor recognition confidence participate in fitting.
     pub fn fit(
@@ -164,6 +194,7 @@ impl StatisticsArtifact {
             character_pairs: BTreeMap::new(),
             words: BTreeMap::new(),
             word_pairs: BTreeMap::new(),
+            pos: None,
         };
         for (text, analysis) in documents {
             if text.len() > MAX_DOCUMENT_BYTES || analysis.provenance != asset.metadata.analyzer {
@@ -255,6 +286,8 @@ pub struct StatisticsObservation {
     pub words: FrequencyObservation,
     pub word_pairs: FrequencyObservation,
     pub oov_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pos: Option<PosPairObservation>,
 }
 impl StatisticsObservation {
     pub fn validate(
@@ -279,7 +312,13 @@ impl StatisticsObservation {
                 "invalid statistics observation identity/coverage".into(),
             ));
         }
-        for family in [&self.character_pairs, &self.words, &self.word_pairs] {
+        if let Some(pos) = &self.pos {
+            pos.validate(self.word_pairs.unit_count)?;
+        }
+        for family in [&self.character_pairs, &self.words, &self.word_pairs]
+            .into_iter()
+            .chain(self.pos.as_ref().and_then(|p| p.frequencies.as_ref()))
+        {
             let expected = if family.unit_count == 0 {
                 None
             } else {
@@ -356,6 +395,11 @@ impl LightweightStatistics {
             words: FrequencyObservation::default(),
             word_pairs: FrequencyObservation::default(),
             oov_count: analysis.morphemes.iter().filter(|w| w.is_oov).count(),
+            pos: self
+                .artifact
+                .pos
+                .as_ref()
+                .map(|p| p.observe(text, analysis)),
         };
         let chars: Vec<_> = text.char_indices().collect();
         for pair in chars.windows(2) {
