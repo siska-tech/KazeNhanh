@@ -16,7 +16,7 @@ branch: feat/2-text-evaluation-foundation
 
 ## 進捗
 
-- [ ] P0: 検証基盤復旧
+- [x] P0: 検証基盤復旧（2026-10-04完了）
 - [ ] P1: 評価契約・責務分離
 - [ ] P2: 一次検出MVP
 - [ ] P3: 選択的SLM
@@ -68,3 +68,19 @@ Draft PR: [#3](https://github.com/siska-tech/KazeNhanh/pull/3)。16fbaa2のLinux
 CriterionがCRITERION_OUTPUTを読むconfigを追加。soakのrootをリポジトリ直下へ訂正し、stdout/stderrログと測定JSONを分けて保存。失敗を伝播し、終了時に環境変数と作業ディレクトリを復元する。CIは成果物欠落をエラーにする。
 
 bench targetのcargo check、soakの0分起動、隔離fixtureで子プロセス失敗の伝播をローカル検証。性能値はモックworkflowでありSLM性能を示さない。
+
+## P0完了（2026-10-04）
+
+以下が現時点の結果。上記の「残作業」「remote未確認」は作業途中の記録。
+
+- [x] 学習済みSmolLM2-135M-Instruct Q4_K_M（105,454,432 bytes）と公式tokenizer/config/model cardを固定revision・SHA256で取得
+- [x] setup-model.ps1の初回取得、オフライン再利用、欠落・hash不一致拒否を確認
+- [x] Python公式実装（transformers 4.46.3/tokenizers 0.20.3）で独立生成した日本語・混在文・絵文字/全角/結合文字・special tokenの4参照をRust tokenizers 0.19.1と照合
+- [x] 公式chat template適用後（旧facadeと同じtrimを適用）のprompt IDも全4件一致。参照再生成のSHA256一致、誤ったtext/prompt IDの拒否も確認
+- [x] Windows CPUの本番Candleで同一engineへ異なる4promptを入力し、全8推論の非空出力・各prompt再実行の一致を確認
+- [x] 独立した実モデルCIジョブとtrained-model-smokeログ成果物を追加
+- [x] 既存Windows/Linux QA、TSan、Criterion/Soakは[1e7589f CI](https://github.com/siska-tech/KazeNhanh/actions/runs/37177846413)で全成功。soakの5反復ログ・20測定JSONを取得確認済み
+
+Windows検証: Core i7-1360P、Rust 1.99.0、debug build。8生成は26,794〜39,503ms（短い英語prompt、各最大128生成token）。debug smokeの時間であり、製品latency SLOや日本語品質の保証ではない。英語学習モデルはP0互換性fixtureとして使用し、日本語judge選定・判定品質・p95/RSS・常駐SLM soakは計画どおりP3/P4で扱う。
+
+固定資産・参照生成・実行手順: [推論エンジン](../docs/inference_engine.md)、[参照fixture](../tests/fixtures/smollm2/README.md)。P0完了後の次工程はP1（評価契約・責務分離）。移行全体はprogressを維持し、P1〜P5は未完了。

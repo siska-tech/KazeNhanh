@@ -1,4 +1,4 @@
-﻿# 推論エンジンの利用と検証
+# 推論エンジンの利用と検証
 
 2026-10-04、Issue #2/P0で本番runtimeとテストfixtureを分離した。
 
@@ -51,7 +51,7 @@ let output = engine.synthesize_summary(vec!["日本語の短い文章です。".
 
 合成GGUFは学習済みSLMではない。生成の言語品質や実用モデルのCPU性能を示すものではなく、従来のモックlatency試験も削除した。
 
-## 学習済みローカル資産の任意検証
+## P0の固定学習済みモデル検証
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify-model.ps1 `
@@ -75,4 +75,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify-model.ps1
 
 runnerは資産SHA256を表示し、参照ID照合、本番ロード、生成が空でないこと、同じpromptの再実行で同じ出力が得られることを確認。出力と各推論の時間をJSON行として標準出力へ返す。モデルやtokenizerの自動取得はしない。
 
-このrunnerは言語品質の自動合否・p95/RSS計測を含まない。学習済み資産がまだ選定されていないため、今回のPCではその検証を実行していない。ライフタイムがstaticの旧EngineConfigへ合わせ、CLIの資産bytesはプロセス終了まで保持する。owned資産への移行はP1で扱う。
+このrunnerは言語品質の自動合否・p95/RSS計測を含まない。P0ではSmolLM2-135M-Instruct Q4_K_M（105,454,432 bytes、Apache-2.0）を互換性確認用に使用する。公式tokenizerとGGUF変換元のrevision・SHA256をresources/models/smollm2.lock.jsonに固定。日本語judgeとしての採用を意味しない。ライフタイムがstaticの旧EngineConfigへ合わせ、CLIの資産bytesはプロセス終了まで保持する。owned資産への移行はP1で扱う。
+
+固定fixtureの取得・検証:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup-model.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/verify-model.ps1 `
+  -ModelPath target/model-smoke/model.gguf `
+  -TokenizerPath target/model-smoke/tokenizer.json `
+  -ReferenceCasesPath tests/fixtures/smollm2/reference-cases.json -Offline
+```
+
+一度取得すればsetup-model.ps1にも`-Offline`を指定できる。欠落・hash不一致は停止する。資産はignored target内へ保存し、通常の開発セットアップではモデル取得を必須にしない。CIのTrained GGUF CPU & Official Tokenizer Smokeジョブが同じfixtureを検証し、trained-model-smoke成果物へログを保存する。
+
+参照IDはRustとは別バージョンの公式Python実装で生成済み。再生成時だけPython/uvが必要:
+
+```powershell
+uv venv --python 3.12 target/model-reference-venv
+uv pip install --python target/model-reference-venv/Scripts/python.exe -r scripts/dev/model-reference-requirements.txt
+target/model-reference-venv/Scripts/python.exe scripts/dev/generate-model-references.py `
+  target/model-smoke target/model-smoke/regenerated-cases.json
+```
+
+再生成JSONはtests/fixtures/smollm2/reference-cases.jsonと一致すること。通常のRust検証にPython/PyTorchは不要。[参照fixtureの出典](../tests/fixtures/smollm2/README.md)も参照。

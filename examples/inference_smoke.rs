@@ -13,6 +13,8 @@ use tokenizers::Tokenizer;
 struct ReferenceCase {
     text: String,
     expected_ids: Vec<u32>,
+    #[serde(default)]
+    expected_prompt_ids: Vec<u32>,
     // A model-specific chat template can be supplied by the reference author.
     prompt: String,
 }
@@ -58,6 +60,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 actual.get_ids()
             )
             .into());
+        }
+    }
+    for (index, case) in references.iter().enumerate() {
+        if !case.expected_prompt_ids.is_empty() {
+            let actual = tokenizer
+                .encode(case.prompt.as_str(), true)
+                .map_err(|err| err.to_string())?;
+            if actual.get_ids() != case.expected_prompt_ids {
+                return Err(format!("Chat template token IDs mismatch at case {index}").into());
+            }
         }
     }
     // The legacy EngineConfig owns static resources. These one-shot CLI buffers

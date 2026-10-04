@@ -67,6 +67,35 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
 
+  trained-model:
+    name: Trained GGUF CPU & Official Tokenizer Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v2
+      - name: Set up pinned dictionary and trained assets
+        shell: pwsh
+        run: |
+          ./scripts/dev/setup-dev.ps1
+          ./scripts/dev/setup-model.ps1
+      - name: Run offline production CPU smoke against independent reference IDs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          ./scripts/dev/verify-model.ps1 -ModelPath target/model-smoke/model.gguf -TokenizerPath target/model-smoke/tokenizer.json -ReferenceCasesPath tests/fixtures/smollm2/reference-cases.json -Offline | Tee-Object -FilePath artifacts/trained-model-smoke.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trained-model-smoke
+          path: artifacts/trained-model-smoke.log
+          if-no-files-found: error
+
   thread-sanitizer:
     name: Thread Sanitizer Checks
     runs-on: ubuntu-latest

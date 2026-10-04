@@ -105,6 +105,8 @@ Sudachi 辞書はライセンスの都合で同梱していません。利用時
 - `docs/` : 詳細設計や利用ガイド
 
 ## 開発進捗
+
+- 2026-10-04: P0完了。学習済みGGUFのCPU生成・再現性と公式tokenizerの独立参照IDを確認し、固定モデルセットアップ・実モデルCIを追加。次工程はP1（評価契約・責務分離）。[進捗記録](tasks/task-redesign-002-text-evaluation-migration.md)。
 - 2026-10-04: P0継続。推論backendを明示注入へ変更し、tokenizer資産の不一致を拒否。合成量子化GGUFで本番CPU経路を検証。[推論手順](docs/inference_engine.md)。
 - 2026-10-04: [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)を起票し、P0に着手。セットアップとテスト登録を整備し、Windowsで実辞書・結合・並行性テストが成功。[移行タスク](tasks/task-redesign-002-text-evaluation-migration.md)。
 - 2026-10-04: [テキスト妥当性評価基盤への再設計監査・計画](docs/KZN-REDESIGN-PLAN-001.md)を作成。実装は未着手。既存の結合テスト登録・実モデル検証に課題があり、旧来の品質表記は同計画の監査結果と併せて参照してください。
@@ -234,7 +236,7 @@ Sudachi dictionaries are not bundled for licensing reasons. Obtain the official 
 - `docs/`: design notes and usage guides
 
 ## Project Progress
-- 2026-10-04: Started [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2), added reproducible Sudachi setup and registered integration/concurrency tests; local Windows verification passed. P0 remains in progress.
+- 2026-10-04: Started [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2), added reproducible Sudachi setup and registered integration/concurrency tests; local Windows verification passed. P0 completed with trained GGUF CPU generation, repeatability and independently generated official tokenizer IDs. Next: P1 evaluation contracts and separation.
 - 2026-10-04: Added the [text evaluation redesign audit and plan](docs/KZN-REDESIGN-PLAN-001.md). Implementation has not started. The audit identifies gaps in integration-test registration and real-model validation; read earlier quality claims alongside these findings.
 - 2025-11-08: Completed CI/CD integration (`subtask-testing-001-06-ci`) with automated tests, ThreadSanitizer, and performance runs
 - 2025-11-07: Finalized performance/soak tooling (`subtask-testing-001-05-performance`) and published Criterion + soak workflows

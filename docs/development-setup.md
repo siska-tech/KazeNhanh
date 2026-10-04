@@ -63,7 +63,7 @@ RustのSudachi v0.6.9はCargo.lockで固定する。辞書は公式配布の[Sud
 | `cargo test --locked --features mock_inference` | unit testsと登録済みGit/要約/並行性workflow。workflowは明示的にSLM fakeを注入、NLPは実辞書。本番CPUの合成GGUF試験も実行 |
 | `scripts/dev/verify.ps1` | 上記とformat、期待する結合・並行性テスト名の登録を確認 |
 
-`cargo test`でも本番runtimeをコンパイルし、fakeは明示的に注入する。合成量子化GGUFでCPU forwardとKV cacheを確認するが、学習済みSLMの精度・速度は未検証。[推論資産検証手順](inference_engine.md)に従ってverify-model.ps1へローカルGGUF・tokenizer・参照token IDを渡す。
+`cargo test`でも本番runtimeをコンパイルし、fakeは明示的に注入する。合成量子化GGUFでCPU forwardとKV cacheを確認するが、P0の学習済みSmolLM2資産は専用ジョブでCPU生成・参照ID・再現性を検証する。日本語判定精度・速度SLOはP3/P4で扱う。[推論資産検証手順](inference_engine.md)に従ってverify-model.ps1へローカルGGUF・tokenizer・参照token IDを渡す。
 
 ## Linux CI
 
