@@ -2,7 +2,7 @@
 
 - 作成日: 2026-10-04 (Asia/Tokyo)
 - 監査対象: `2d2e111`、0.2開発版 / `kzn.evaluation.v3`
-- 状態: ユーザーの目的変更を反映した計画。R0契約/保留とR1 source evidenceを実装済み、R2以降は未実装。[R1 API](recognition-source-evidence.md)。[R0 API](recognition-api.md)。
+- 状態: ユーザーの目的変更を反映した計画。R0/R1実装済み。R2は統計evidence・資産を先行実装して進行中、検出/fusion・実品質は未受入。[R1 API](recognition-source-evidence.md)。[R0 API](recognition-api.md)。
 - 優先順位: 今後の目的・移行順は本書を優先。旧PLAN-001の監査履歴、P0〜P2実績、API-SPEC-002の現行動作は保持する。
 - 実装追跡: [移行タスク](../tasks/task-redesign-002-text-evaluation-migration.md)。以下は設計時の提案、実装済み範囲はR0 API文書を参照。
 
@@ -201,7 +201,7 @@ P0〜P2の完了は基盤/旧screeningの実績として保持する。P3の目�
 - 0.2は未公開の開発版だが、既存example/利用コードのため新APIを明示追加する。公開Rust型の破壊的変更が必要ならpackage版と移行ガイドで明記する。
 - naturalness/semantic必須軸をrecognition APIから外す。単に既存DimensionへRecognitionRiskを追加し、三軸平均や旧verdictを流用する方法は採らない。
 - text-only、confidence-only、候補付きの能力差をprofile/reportに示す。raw input制限、未知schema拒否、資産不整合拒否、モデルなし起動の回帰を維持する。
-- 計画作成時は設計案と文書の優先順位のみ更新した。その後R0の新APIを実装（次節）。adapter、統計asset、LM scorer、学習/校正モデルの実装と品質検証は未実施。
+- 計画作成時は設計案と文書の優先順位のみ更新した。その後R0の新APIを実装（次節）。R1 adapterとR2統計evidence/資産を追加済み。検出/fusion、LM scorer、学習/校正モデルと実品質の受入は未実施。
 
 ## 11. R0実装記録（2026-10-04）
 
@@ -210,3 +210,9 @@ RecognitionEngine/Input/Reportとモデル不要facade/CLIを追加。旧screeni
 ## 12. R1実装記録（2026-10-04）
 
 typed confidence/候補/profile、依存ID、欠測/unknown、bounded Unicode alignmentとsource anchorを追加。OCR bboxとASR時刻/粒度をfacade adapterで検証。reportはkzn.recognition.v2、source evidenceはkzn.recognizer.v1。提供OCR15件は元confidenceの尺度/方向/集約法を推測せず、全件undetermined・risk=null・SLM呼出0。goldから候補を作らない。ASRは合成契約fixtureで、実品質未評価。次はR2。[R1 APIと検証](recognition-source-evidence.md)。
+
+## 13. R2統計evidenceの先行実装（2026-10-04）
+
+文字bigram・全形態素の語unigram/bigramをローカル疎頻度表から抽出し、未観測率と原文span・欠測理由をLexicalStatisticsへ返す。一次と統計は1回の形態素解析を共有。domain/辞書/settings/mode不一致では不適用とし、頻度/OOVを誤り確率・review・低リスクへ変換しない。版付き資産、clean corpus builder、SHA256照合runner、再現生成と改ざん/境界検証を追加。core依存境界・SLM呼出0は維持。
+
+8文の人工clean契約fixtureは代表資産ではない。ユーザー15件を学習へ使わず、ローカル統計観察では全件undetermined / risk=null。統計レポートの外部アップロード追加は自動承認レビューが拒否し、取り下げた。CIは人工契約の資産生成とhash拒否のみ確認し、ユーザー由来の観察レポートはローカル保存。R2はprogress。文字種/POS等の異常特徴、rule/fusion、独立実OCR/ASR集合と難しいclean例による品質比較が残る。[実装・手順・限界](recognition-statistics.md)。

@@ -47,7 +47,7 @@ typed source evidenceを渡した場合はrecognizer familyをobservedとして�
 
 ## 現実装の境界
 
-既存のPrimaryRulesを証拠抽出に利用し、そのacceptableとnaturalness scoreは新判断へ転用しない。R0時点ではsource固有profile、型付きconfidence/N-bestは未実装だった。R1で追加済み。語彙統計、risk estimator、LM scorer、校正は未実装。旧SecondaryWorker/Qwenを新engineへ接続するAPIは持たない。
+既存のPrimaryRulesを証拠抽出に利用し、そのacceptableとnaturalness scoreは新判断へ転用しない。R0時点ではsource固有profile、型付きconfidence/N-bestは未実装だった。R1で追加済み。R2で語彙/文字n-gramの統計evidenceを先行追加した。[統計資産と適用条件](recognition-statistics.md)。統計による異常検出/fusion、risk estimator、LM scorer、校正は未実装。旧SecondaryWorker/Qwenを新engineへ接続するAPIは持たない。
 
 旧evaluate APIはそのまま利用可能だが、OCR/ASRの新規利用はrecognition APIを推奨する。R0で保留できることと誤りを検出できることを区別する。R1でconfidence/candidatesの型、adapter/profile、欠測とalignmentを追加済み。次はR2の軽量統計baseline。
 

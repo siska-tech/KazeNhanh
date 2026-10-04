@@ -217,3 +217,17 @@ PP-OCRv6 mediumの実認識5件を原文/confidence付きで追加。単一画�
 - [x] minimalでのsource契約9件とverify.ps1 -Offline成功。core/default/minimal/optional依存境界・全workspace回帰、formatと文書リンクを確認
 
 提供OCR15件は全てundetermined / risk=null / SLM呼出0。confidenceはsegment粒度の未校正engine_score、方向/集約法/targetは不明として保持。実ASRデータは未取得、合成fixtureは契約試験のみ。risk推定・校正・モデル選定・検出品質受入はR2以降。[実装と互換性](../docs/recognition-source-evidence.md)。移行全体はprogress。
+
+## R2統計evidence着手（2026-10-04）
+
+- [x] 原文文字bigram・全形態素dictionary_form語unigram/bigram、未観測率・byte span・欠測分母
+- [x] domain/辞書/settings/backend/mode照合、版付き疎頻度asset・出所/license/corpus hash、入力/entry/event上限
+- [x] 一次と統計で1回の解析を共有。頻度/OOVからrisk/low_risk/reviewを自動生成しない
+- [x] モデル不要clean corpus builder、SHA256照合runner、再現生成/不正asset/report/hash拒否
+- [x] 人工8文の契約fixture、Unicode/bounds/改ざん/core契約6件、実Sudachiのhard clean・版不一致回帰
+- [x] 提供OCR15件のローカル統計観察（学習への転記/label投入なし）: review=0、undetermined=15、low_risk=0、risk=null、SLM呼出0
+- [ ] 文字種/POS等の追加特徴、異常rule・小さなfusionと比較baseline
+- [ ] 独立した実OCR/ASR対、split/転記規約、検出/保留/低リスクの実数・品質比較
+
+R2はprogress。人工clean assetは適用性能を保証しない。統計観察レポートのCIアップロード追加は自動承認レビューが拒否したため取り下げ、ユーザー由来の詳細はローカル保存にした。CIは統計生成とhash拒否を確認する。[統計契約](../docs/recognition-statistics.md)。移行全体のstatus/end_dateは未変更。
+検証結果: verify.ps1 -Offline成功（core/default/minimal/qwen依存境界、core40件、source契約9件、実Sudachi9件、全workspace/legacy回帰）。統計6件の最終再実行も成功。R1 commit 2618e17の[remote CI](https://github.com/siska-tech/KazeNhanh/actions/runs/37204064451)は成功。R2のremote CIはpush後に確認する。

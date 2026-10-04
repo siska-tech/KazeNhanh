@@ -524,6 +524,10 @@ impl EvaluationEngine {
         self
     }
     pub fn evaluate(&self, input: TextInput<'_>) -> Result<EvaluationReport, EvaluationError> {
+        let analysis = self.analyze_input(&input)?;
+        self.evaluate_analyzed(input, &analysis)
+    }
+    fn analyze_input(&self, input: &TextInput<'_>) -> Result<MorphAnalysis, EvaluationError> {
         if input.language != "ja" || input.text.len() > self.config.max_input_bytes {
             return Err(EvaluationError::InvalidInput(
                 "only ja is supported; input must fit max_input_bytes".into(),
@@ -533,21 +537,16 @@ impl EvaluationEngine {
             annotation.span.validate(input.text)?;
         }
         let analysis = self.analyzer.analyze(input.text)?;
-        let mut previous_end = 0;
-        for token in &analysis.morphemes {
-            token.span.validate(input.text)?;
-            if token.span.start() < previous_end
-                || token.span.start() == token.span.end()
-                || &input.text[token.span.start()..token.span.end()] != token.surface
-            {
-                return Err(EvaluationError::Contract(
-                    "morphemes must preserve ordered, nonoverlapping raw surfaces".into(),
-                ));
-            }
-            previous_end = token.span.end();
-        }
+        validate_morphology(input.text, &analysis)?;
+        Ok(analysis)
+    }
+    fn evaluate_analyzed(
+        &self,
+        input: TextInput<'_>,
+        analysis: &MorphAnalysis,
+    ) -> Result<EvaluationReport, EvaluationError> {
         let mut primary = match &self.detector {
-            Some(detector) => detector.detect(&input, &analysis, &self.config)?,
+            Some(detector) => detector.detect(&input, analysis, &self.config)?,
             None => PrimaryEvaluation {
                 verdict: Verdict::Undetermined,
                 issues: vec![],
@@ -707,7 +706,7 @@ impl EvaluationEngine {
             metrics: EvaluationMetrics {
                 morpheme_count: analysis.morphemes.len(),
                 slm_calls: 0,
-                morphology: MorphologyFeatures::extract(&analysis),
+                morphology: MorphologyFeatures::extract(analysis),
             },
         };
         report.validate()?;
@@ -735,3 +734,20 @@ mod primary_tests;
 
 #[cfg(test)]
 mod secondary_tests;
+
+fn validate_morphology(text: &str, analysis: &MorphAnalysis) -> Result<(), EvaluationError> {
+    let mut previous_end = 0;
+    for token in &analysis.morphemes {
+        token.span.validate(text)?;
+        if token.span.start() < previous_end
+            || token.span.start() == token.span.end()
+            || &text[token.span.start()..token.span.end()] != token.surface
+        {
+            return Err(EvaluationError::Contract(
+                "morphemes must preserve ordered, nonoverlapping raw surfaces".into(),
+            ));
+        }
+        previous_end = token.span.end();
+    }
+    Ok(())
+}

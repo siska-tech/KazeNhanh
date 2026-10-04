@@ -3,8 +3,8 @@ use kaze_nhanh::source_adapters::*;
 use kaze_nhanh::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
-    if args.len() != 2 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json".into());
+    if args.len() != 2 && args.len() != 5 {
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain]".into());
     }
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let assets = SudachiConfig::from_paths(
@@ -12,7 +12,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         root.join("resources/sudachi/sudachi.json"),
         SudachiMode::C,
     )?;
-    let engine = japanese_recognition_engine(assets, RecognitionConfig::default())?;
+    let mut engine = japanese_recognition_engine(assets, RecognitionConfig::default())?;
+    let statistics_domain = if args.len() == 5 {
+        use sha2::{Digest, Sha256};
+        if std::fs::metadata(&args[2])?.len() > 8 * 1024 * 1024 {
+            return Err("statistics asset exceeds 8 MiB".into());
+        }
+        let bytes = std::fs::read(&args[2])?;
+        let hash = format!("{:x}", Sha256::digest(&bytes));
+        if args[3].to_str() != Some(hash.as_str()) {
+            return Err("statistics asset SHA256 mismatch".into());
+        }
+        let artifact: StatisticsArtifact = serde_json::from_slice(&bytes)?;
+        engine = engine.with_statistics(std::sync::Arc::new(LightweightStatistics::new(artifact)?));
+        Some(args[4].to_str().ok_or("domain must be Unicode")?)
+    } else {
+        None
+    };
     let data = std::fs::read_to_string(&args[0])?;
     let mut ids = std::collections::HashSet::new();
     let mut reports = Vec::new();
@@ -68,6 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "image_position":sample["image_position"],"image_column_from_right":sample["image_column_from_right"]}),
         }];
         let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, document, id);
+        input.domain = statistics_domain;
         input.annotations = &annotations;
         input.recognizer_evidence = Some(&evidence);
         let report = engine.evaluate_recognition(input)?;
@@ -90,6 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "undetermined_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Undetermined).count(),
         "review_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Review).count(),
         "low_risk_count":0,"slm_calls":0,"gold_used_for_inference":false,
+        "statistics_enabled":statistics_domain.is_some(),
         "score_semantics":"uncalibrated_engine_score_direction_and_aggregation_unknown"});
     let output = serde_json::json!({"schema_version":"kzn.recognition.observation.v1","summary":summary,"reports":reports});
     let path = std::path::PathBuf::from(&args[1]);

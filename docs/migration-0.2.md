@@ -65,3 +65,5 @@ P3制御契約: optional SecondaryWorkerを明示接続すると選択的judge�
 P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。
 
 Recognition R1への移行: reportはkzn.recognition.v2、新typed evidenceをRecognitionInput.recognizer_evidenceへ追加可能。旧v1 JSONは新consumerで再評価する。原文を再解釈せず、旧evaluation.v3は維持。[R1契約と互換性](recognition-source-evidence.md)。
+
+Recognition R2統計evidence（先行実装）: LightweightStatisticsをwith_statisticsで明示接続し、RecognitionInput.domainと資産domain・解析identityが一致した場合のみ観察値を返す。既定の判断・schema v2は維持。頻度を認識誤り確率に変換しない。[資産生成と手順](recognition-statistics.md)。R2全体の品質受入は未完了。

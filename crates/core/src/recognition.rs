@@ -45,6 +45,9 @@ wire_enum!(RecognitionFindingKind {
     InputConstraint
 });
 
+mod statistics;
+pub use statistics::*;
+
 mod source_evidence;
 pub use source_evidence::*;
 
@@ -354,6 +357,31 @@ impl RecognitionReport {
                 "low-risk policy requires calibration identity".into(),
             ));
         }
+        if let Some(row) = self.evidence.iter().find(|e| {
+            e.kind == RecognitionEvidenceKind::LexicalStatistics
+                && e.status == RecognitionEvidenceStatus::Observed
+        }) {
+            if row.span != ByteSpan::whole(&self.original_text) {
+                return Err(EvaluationError::Contract(
+                    "statistics scope must cover supplied text".into(),
+                ));
+            }
+            let observation: StatisticsObservation =
+                serde_json::from_value(row.value.clone().expect("observed evidence validated"))
+                    .map_err(|_| {
+                        EvaluationError::Contract("malformed statistics observation".into())
+                    })?;
+            observation.validate(
+                &self.original_text,
+                self.domain.as_deref(),
+                &row.provider_id,
+            )?;
+            if observation.words.unit_count != self.metrics.morpheme_count {
+                return Err(EvaluationError::Contract(
+                    "statistics morphology count mismatch".into(),
+                ));
+            }
+        }
         if self.decision == RecognitionDecision::LowRisk {
             let within_threshold = self
                 .recognition_risk
@@ -385,10 +413,11 @@ impl Default for RecognitionConfig {
     }
 }
 
-/// Model-free R0 path. Old screening verdicts/scores are never promoted to low risk.
+/// Model-free recognition evidence. Screening verdicts/frequencies never imply low risk.
 /// No secondary worker can be attached to this engine.
 pub struct RecognitionEngine {
     screening: EvaluationEngine,
+    statistics: Option<Arc<LightweightStatistics>>,
 }
 impl RecognitionEngine {
     pub fn new(
@@ -399,9 +428,15 @@ impl RecognitionEngine {
         let mut evaluation = profile.evaluation_config();
         evaluation.max_input_bytes = config.max_input_bytes;
         Ok(Self {
+            statistics: None,
             screening: EvaluationEngine::new(analyzer, evaluation)?
                 .with_primary_detector(Arc::new(PrimaryRules::new(profile)?)),
         })
+    }
+
+    pub fn with_statistics(mut self, statistics: Arc<LightweightStatistics>) -> Self {
+        self.statistics = Some(statistics);
+        self
     }
 
     pub fn evaluate_recognition(
@@ -426,7 +461,8 @@ impl RecognitionEngine {
         text_input.source = input.source.source_kind();
         text_input.domain = input.domain;
         text_input.annotations = input.annotations;
-        let screening = self.screening.evaluate(text_input)?;
+        let analysis = self.screening.analyze_input(&text_input)?;
+        let screening = self.screening.evaluate_analyzed(text_input, &analysis)?;
         let whole = ByteSpan::whole(input.text);
         let observed = |kind, provider: &str, value, reason: &str| RecognitionEvidence {
             kind,
@@ -527,7 +563,7 @@ impl RecognitionEngine {
                 unavailable(
                     RecognitionEvidenceKind::LexicalStatistics,
                     RecognitionEvidenceStatus::Unsupported,
-                    "lexical_statistics_not_implemented",
+                    "lexical_statistics_not_configured",
                 ),
                 unavailable(
                     RecognitionEvidenceKind::LanguageModel,
@@ -554,7 +590,7 @@ impl RecognitionEngine {
             metrics: screening.metrics,
             provenance: screening.provenance,
             limitations: vec![
-                "r0_screening_evidence_only".into(),
+                "limited_text_evidence_no_risk_estimator".into(),
                 "transcription_policy_not_configured".into(),
                 "no_accepted_low_risk_policy".into(),
                 "source_specific_evidence_not_interpreted".into(),
@@ -596,6 +632,35 @@ impl RecognitionEngine {
             report.provenance.push(ArtifactIdentity {
                 component: "source_profile".into(),
                 id: source_evidence.profile.id.clone(),
+                sha256: None,
+            });
+        }
+        if let Some(statistics) = &self.statistics {
+            let row = report
+                .evidence
+                .iter_mut()
+                .find(|e| e.kind == RecognitionEvidenceKind::LexicalStatistics)
+                .expect("fixed evidence families");
+            row.provider_id = statistics.artifact_id().into();
+            match statistics.observe(input.text, input.domain, &analysis) {
+                Ok(observation) => {
+                    row.status = RecognitionEvidenceStatus::Observed;
+                    row.value =
+                        Some(serde_json::to_value(observation).expect("finite bounded statistics"));
+                    row.reason = "corpus_relative_frequencies_not_error_probability".into();
+                    report
+                        .limitations
+                        .push("unseen_or_rare_units_not_recognition_errors".into());
+                }
+                Err(reason) => {
+                    row.status = RecognitionEvidenceStatus::Unsupported;
+                    row.reason = reason.into();
+                    report.reasons.push(reason.into());
+                }
+            }
+            report.provenance.push(ArtifactIdentity {
+                component: "lexical_statistics".into(),
+                id: statistics.artifact_id().into(),
                 sha256: None,
             });
         }

@@ -274,3 +274,81 @@ fn recognition_r0_preserves_fifteen_ocr_samples_and_abstains_without_risk_eviden
         .unwrap();
     assert_eq!(anomaly.decision, RecognitionDecision::Review);
 }
+
+#[test]
+fn real_sudachi_statistics_share_artifacts_and_preserve_hard_clean_abstentions() {
+    use kaze_nhanh::{
+        LightweightStatistics, RecognitionConfig, RecognitionDecision, RecognitionEngine,
+        RecognitionEvidenceKind, RecognitionEvidenceStatus, RecognitionInput, RecognitionSource,
+        StatisticsArtifact, StatisticsMetadata,
+    };
+    use sha2::{Digest, Sha256};
+    let bytes = include_bytes!("fixtures/statistics/clean-contract.jsonl");
+    let documents: Vec<_> = std::str::from_utf8(bytes)
+        .unwrap()
+        .lines()
+        .map(|line| {
+            let sample: serde_json::Value = serde_json::from_str(line).unwrap();
+            let text = sample["text"].as_str().unwrap().to_owned();
+            let analysis = analyzer().analyze(&text).unwrap();
+            (text, analysis)
+        })
+        .collect();
+    let asset = StatisticsArtifact::fit(
+        StatisticsMetadata {
+            id: "contract.stats.v1".into(),
+            domain: "contract_fixture".into(),
+            corpus_id: "authored-contract-only".into(),
+            corpus_sha256: format!("{:x}", Sha256::digest(bytes)),
+            license: "CC0-1.0".into(),
+            analyzer: documents[0].1.provenance.clone(),
+        },
+        &documents,
+    )
+    .unwrap();
+    let provider = Arc::new(LightweightStatistics::new(asset).unwrap());
+    let engine = RecognitionEngine::new(analyzer(), RecognitionConfig::default())
+        .unwrap()
+        .with_statistics(provider.clone());
+    // These are authored contract cases, not real ASR measurements or quality acceptance.
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        for text in [
+            "体系キープ",
+            "あの、その、はい。",
+            "型番ZX-900B",
+            "青凪さん、ええと、明日で。",
+            "猫猫猫猫猫猫",
+        ] {
+            let mut input = RecognitionInput::new(text, source, "contract-only", "held-clean");
+            input.domain = Some("contract_fixture");
+            let report = engine.evaluate_recognition(input).unwrap();
+            assert_eq!(report.original_text, text);
+            assert_eq!(report.recognition_risk.value, None);
+            assert_eq!(report.metrics.slm_calls, 0);
+            assert_ne!(report.decision, RecognitionDecision::LowRisk);
+            let row = report
+                .evidence
+                .iter()
+                .find(|e| e.kind == RecognitionEvidenceKind::LexicalStatistics)
+                .unwrap();
+            assert_eq!(row.status, RecognitionEvidenceStatus::Observed);
+            if text == "猫猫猫猫猫猫" {
+                assert_eq!(report.decision, RecognitionDecision::Review);
+            } else {
+                assert_eq!(report.decision, RecognitionDecision::Undetermined);
+            }
+        }
+    }
+    let changed = RecognitionEngine::new(
+        Arc::new(SudachiAnalyzer::new(assets(SudachiMode::A)).unwrap()),
+        RecognitionConfig::default(),
+    )
+    .unwrap()
+    .with_statistics(provider);
+    let mut input = RecognitionInput::new("猫", RecognitionSource::Asr, "d", "s");
+    input.domain = Some("contract_fixture");
+    let report = changed.evaluate_recognition(input).unwrap();
+    assert!(report
+        .reasons
+        .contains(&"statistics_analyzer_artifacts_mismatch".into()));
+}
