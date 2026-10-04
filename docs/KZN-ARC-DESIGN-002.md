@@ -22,3 +22,7 @@
 P1で検出精度を保証せず、未実装の判定はundetermined/null/全文未評価。P2でSudachi特徴を使う一次検出器、P3でSecondaryJudgeとrouting、有界worker、P4でScoreCalibratorと品質SLOを追加する。SLM APIのために空crateを先行生成しない。Sudachi経路へ要約のstopword除去を流用しない。
 
 [0.2移行ガイドとfeature matrix](migration-0.2.md)を参照。workspaceはkaze_nhanh_core、kaze_nhanh_sudachi、kaze_nhanh_legacyとroot facadeで構成し、各通常依存の禁止条件をverify.ps1で検査する。
+
+## P2追加
+
+coreのPrimaryRules/DomainProfile/MorphologyFeaturesを標準Sudachi facadeへ注入。入力制約・文字/形態素反復等を検出し、意味軸は未評価のまま二次候補にする。SLM backendは持たず呼出0。評価fixture runnerは開発exampleへ分離し、通常runtimeにdatasetや学習依存を含めない。[一次検出仕様](primary-detection.md)。

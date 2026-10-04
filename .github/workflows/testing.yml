@@ -53,6 +53,19 @@ jobs:
         shell: pwsh
         run: ./scripts/dev/verify.ps1 -Offline
 
+      - name: Run primary screening fixture baseline (no SLM)
+        shell: pwsh
+        run: |
+          cargo run --locked --offline --example primary_baseline -- evaluation/primary-baseline.jsonl artifacts/primary-baseline
+          if ($LASTEXITCODE -ne 0) { throw 'Primary baseline failed.' }
+
+      - name: Upload primary reports and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: primary-baseline-${{ runner.os }}
+          path: artifacts/primary-baseline
+          if-no-files-found: error
       - name: Generate coverage report
         if: runner.os == 'Linux'
         run: |

@@ -81,4 +81,8 @@ TSanジョブはRust公式の[Sanitizer手順](https://doc.rust-lang.org/unstabl
 
 ## 0.2の構成とモデル不要利用
 
-[移行ガイド](migration-0.2.md)を参照。cargo run --example evaluate -- textはSudachi資産だけで起動し、P1では未評価reportを返す。verify.ps1はdefault/no-default/coreの通常依存を検査し、旧Git/Markdown/Candle等の混入をエラーにする。
+[移行ガイド](migration-0.2.md)を参照。cargo run --example evaluate -- textはSudachi資産だけで起動し、P2ではprofileの一次screening reportを返す。意味軸は未評価のまま。verify.ps1はdefault/no-default/coreの通常依存を検査し、旧Git/Markdown/Candle等の混入をエラーにする。
+
+## P2 baseline
+
+cargo run --locked --offline --example primary_baseline -- evaluation/primary-baseline.jsonl target/p2-baselineで34件の手作業fixtureを検証し、JSON reportと集計を保存する。CIではWindows/Linuxの成果物を保存。[一次検出の範囲](primary-detection.md)も参照。

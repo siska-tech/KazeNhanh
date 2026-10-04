@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Reproducible fixture SHA256 on Windows and Linux
+evaluation/*.jsonl text eol=lf

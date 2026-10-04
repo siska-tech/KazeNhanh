@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
 
-pub const SCHEMA_VERSION: &str = "kzn.evaluation.v1";
+mod primary;
+pub use primary::{DomainProfile, MorphologyFeatures, PrimaryRules, TextFormat, PRIMARY_RULES_ID};
+
+pub const SCHEMA_VERSION: &str = "kzn.evaluation.v2";
 pub const FEATURE_VERSION: &str = "kzn.morphology.v1";
 
 #[derive(Debug, Error, PartialEq)]
@@ -266,6 +269,15 @@ pub struct PrimaryEvaluation {
     pub issues: Vec<Issue>,
 }
 pub trait PrimaryDetector: Send + Sync {
+    fn profile(&self) -> Option<DomainProfile> {
+        None
+    }
+    fn artifacts(&self) -> Vec<ArtifactIdentity> {
+        vec![]
+    }
+    fn limitations(&self) -> Vec<String> {
+        vec![]
+    }
     fn detect(
         &self,
         input: &TextInput<'_>,
@@ -284,14 +296,10 @@ pub struct EvaluationConfig {
 impl Default for EvaluationConfig {
     fn default() -> Self {
         Self {
-            profile_id: "ja.baseline.v1".into(),
+            profile_id: "ja.primary.v1".into(),
             max_input_bytes: 1_048_576,
             semantic_scope: ScoreScope::Internal,
-            required_dimensions: vec![
-                Dimension::Validity,
-                Dimension::Naturalness,
-                Dimension::SemanticConsistency,
-            ],
+            required_dimensions: vec![Dimension::Validity, Dimension::Naturalness],
         }
     }
 }
@@ -315,6 +323,7 @@ pub struct DimensionCoverage {
 pub struct EvaluationMetrics {
     pub morpheme_count: usize,
     pub slm_calls: usize,
+    pub morphology: MorphologyFeatures,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -328,6 +337,7 @@ pub struct EvaluationReport {
     pub annotations: Vec<SourceAnnotation>,
     pub reference_provided: bool,
     pub profile_id: String,
+    pub profile_config: Option<DomainProfile>,
     pub required_dimensions: Vec<Dimension>,
     pub verdict: Verdict,
     pub scores: Scores,
@@ -346,6 +356,14 @@ impl EvaluationReport {
                 "unsupported schema/feature version".into(),
             ));
         }
+        if let Some(profile) = &self.profile_config {
+            profile.validate()?;
+            if profile.id != self.profile_id {
+                return Err(EvaluationError::Contract(
+                    "profile metadata mismatch".into(),
+                ));
+            }
+        }
         for score in self.scores.values() {
             score.validate()?;
         }
@@ -361,6 +379,26 @@ impl EvaluationReport {
         {
             return Err(EvaluationError::Contract(
                 "acceptable requires all mandatory dimensions".into(),
+            ));
+        }
+        if self.verdict == Verdict::Acceptable
+            && self
+                .issues
+                .iter()
+                .any(|issue| issue.severity != Severity::Info)
+        {
+            return Err(EvaluationError::Contract(
+                "acceptable cannot contain unresolved warning/error findings".into(),
+            ));
+        }
+        if self.routing.status == RoutingStatus::Disabled && self.metrics.slm_calls != 0 {
+            return Err(EvaluationError::Contract(
+                "disabled secondary routing cannot claim SLM calls".into(),
+            ));
+        }
+        if self.metrics.morpheme_count != self.metrics.morphology.token_count {
+            return Err(EvaluationError::Contract(
+                "morphology token count mismatch".into(),
             ));
         }
         if self.coverage.len() != 3 {
@@ -394,7 +432,7 @@ impl EvaluationReport {
                     && (row.unassessed_spans != whole || !row.evaluated_spans.is_empty()))
             {
                 return Err(EvaluationError::Contract(
-                    "P1 requires full-input assessed or unassessed coverage".into(),
+                    "primary screening requires full-input assessed or unassessed coverage".into(),
                 ));
             }
         }
@@ -425,13 +463,22 @@ pub struct EvaluationEngine {
 impl EvaluationEngine {
     pub fn new(
         analyzer: Arc<dyn MorphAnalyzer>,
-        config: EvaluationConfig,
+        mut config: EvaluationConfig,
     ) -> Result<Self, EvaluationError> {
         if config.max_input_bytes == 0
             || config.profile_id.trim().is_empty()
             || config.semantic_scope == ScoreScope::FullText
         {
             return Err(EvaluationError::InvalidConfig("nonempty profile, positive byte limit and internal/reference semantic scope required".into()));
+        }
+        if config.semantic_scope == ScoreScope::Reference
+            && !config
+                .required_dimensions
+                .contains(&Dimension::SemanticConsistency)
+        {
+            config
+                .required_dimensions
+                .push(Dimension::SemanticConsistency);
         }
         Ok(Self {
             analyzer,
@@ -495,7 +542,11 @@ impl EvaluationEngine {
                 "detector returned an unexpected score scope".into(),
             ));
         }
-        let mut limitations = Vec::new();
+        let mut limitations = self
+            .detector
+            .as_ref()
+            .map(|detector| detector.limitations())
+            .unwrap_or_default();
         if self.detector.is_none() {
             limitations.push("primary_detector_not_configured".into());
         }
@@ -518,6 +569,52 @@ impl EvaluationEngine {
             })
         {
             primary.verdict = Verdict::Undetermined;
+        }
+        let mut routing_reasons = Vec::new();
+        let secondary_needed = if self.detector.is_none() {
+            None
+        } else if primary.verdict == Verdict::Invalid {
+            Some(false)
+        } else {
+            if primary.verdict == Verdict::Suspicious {
+                routing_reasons.push("primary_warning_requires_review".into());
+            }
+            if self.config.required_dimensions.iter().any(|dimension| {
+                let score = match dimension {
+                    Dimension::Validity => &primary.scores.validity,
+                    Dimension::Naturalness => &primary.scores.naturalness,
+                    Dimension::SemanticConsistency => &primary.scores.semantic_consistency,
+                };
+                matches!(
+                    score.status,
+                    ScoreStatus::NotEvaluated
+                        | ScoreStatus::InsufficientContext
+                        | ScoreStatus::Failed
+                )
+            }) {
+                routing_reasons.push("required_dimension_unresolved".into());
+            }
+            if input
+                .reference
+                .is_some_and(|reference| !reference.trim().is_empty())
+                && primary.scores.semantic_consistency.status != ScoreStatus::Evaluated
+            {
+                routing_reasons.push("reference_consistency_unresolved".into());
+                if primary.verdict == Verdict::Acceptable {
+                    primary.verdict = Verdict::Undetermined;
+                }
+            }
+            Some(!routing_reasons.is_empty())
+        };
+        if secondary_needed == Some(true) {
+            limitations.push("secondary_judge_not_configured".into());
+        }
+        if secondary_needed.is_none() {
+            routing_reasons.push("primary_detector_not_configured".into());
+        }
+        let mut provenance = analysis.provenance.clone();
+        if let Some(detector) = &self.detector {
+            provenance.extend(detector.artifacts());
         }
         let coverage = [
             Dimension::Validity,
@@ -554,21 +651,30 @@ impl EvaluationEngine {
             annotations: input.annotations.to_vec(),
             reference_provided: input.reference.is_some(),
             profile_id: self.config.profile_id.clone(),
+            profile_config: self
+                .detector
+                .as_ref()
+                .and_then(|detector| detector.profile()),
             required_dimensions: self.config.required_dimensions.clone(),
             verdict: primary.verdict,
             scores: primary.scores,
             issues: primary.issues,
             routing: Routing {
-                secondary_needed: None,
-                status: RoutingStatus::NotRequested,
-                reasons: vec!["routing_not_implemented".into()],
+                secondary_needed,
+                status: if secondary_needed == Some(true) {
+                    RoutingStatus::Disabled
+                } else {
+                    RoutingStatus::NotRequested
+                },
+                reasons: routing_reasons,
             },
             coverage,
             limitations,
-            provenance: analysis.provenance,
+            provenance,
             metrics: EvaluationMetrics {
                 morpheme_count: analysis.morphemes.len(),
                 slm_calls: 0,
+                morphology: MorphologyFeatures::extract(&analysis),
             },
         };
         report.validate()?;
@@ -588,3 +694,6 @@ impl EvaluationEngine {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod primary_tests;

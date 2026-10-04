@@ -1,6 +1,6 @@
 # 0.1 → 0.2移行ガイド
 
-2026-10-04、P1でcrateを分離した。0.2は開発版であり、まだ検出器を同梱しない。P2で一次検出を追加する。
+2026-10-04、P1でcrateを分離した。0.2は開発版。P2でPrimaryRulesとDomainProfileを標準経路へ追加した。[一次検出の範囲](primary-detection.md)を参照。
 
 ## 新しい評価API
 
@@ -21,7 +21,7 @@ let report = engine.evaluate(TextInput::new("東京都で日本語を解析し�
 
 dictionary/settingsはowned bytesとしてengineに保持される。static化やBox::leakは不要。辞書・設定SHA256とModeをprovenanceへ記録し、助詞・助動詞を含む全形態素を原文位置で解析する。
 
-P1ではverdict=undetermined、三軸value=null、全文未評価、SLM呼出0。形態素解析成功を「妥当」へ置換しない。独自PrimaryDetectorはwith_primary_detectorで注入できるが、品質受入は利用者の責任となる。標準検出器とprofileはP2で追加する。
+P2の標準経路はprofileの制約と少数ルールを評価する。validity/naturalnessはheuristic、semantic_consistencyはnull。必要な二次判定はdisabled/保留で、SLM呼出0。形態素解析成功だけを「妥当」へ置換しない。独自PrimaryDetectorも注入できるが、品質受入は利用者が検証する。Report schemaはv2へ更新。
 
 ```powershell
 cargo run --locked --example evaluate -- "東京都で自然な日本語を解析します。"

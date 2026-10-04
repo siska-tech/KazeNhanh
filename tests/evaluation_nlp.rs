@@ -36,10 +36,11 @@ fn owned_japanese_engine_starts_without_any_model_and_preserves_all_four_sources
         let report = engine.evaluate(input).unwrap();
         assert_eq!(report.original_text, text);
         assert_eq!(report.source, source);
-        assert_eq!(report.verdict, Verdict::Undetermined);
+        assert_eq!(report.verdict, Verdict::Acceptable);
         assert_eq!(report.metrics.slm_calls, 0);
         assert!(report.metrics.morpheme_count > 3);
-        assert!(report.scores.naturalness.value.is_none());
+        assert!(report.scores.naturalness.value.is_some());
+        assert!(report.scores.semantic_consistency.value.is_none());
         assert!(report
             .provenance
             .iter()
@@ -122,4 +123,24 @@ fn shared_dictionary_supports_concurrent_evaluation() {
         let report = worker.join().unwrap().unwrap();
         assert_eq!(report.verdict, Verdict::Undetermined);
     }
+}
+
+#[test]
+fn real_primary_rules_keep_auxiliaries_and_return_the_original_repeated_range() {
+    let rules = kaze_nhanh::PrimaryRules::new(kaze_nhanh::DomainProfile::screening()).unwrap();
+    let engine = EvaluationEngine::new(analyzer(), EvaluationConfig::default())
+        .unwrap()
+        .with_primary_detector(Arc::new(rules));
+    let text = "今日は晴れですですです。";
+    let report = engine.evaluate(TextInput::new(text)).unwrap();
+    let issue = report
+        .issues
+        .iter()
+        .find(|issue| issue.code == "repeated_token")
+        .unwrap();
+    assert_eq!(&text[issue.span.start()..issue.span.end()], "ですですです");
+    assert!(report.metrics.morphology.auxiliary_count >= 3);
+    assert!(report.metrics.morphology.particle_count >= 1);
+    assert_eq!(report.verdict, Verdict::Suspicious);
+    assert_eq!(report.metrics.slm_calls, 0);
 }

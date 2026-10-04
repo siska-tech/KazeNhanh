@@ -1119,6 +1119,7 @@ dependencies = [
  "kaze_nhanh_sudachi",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "tokenizers",
 ]

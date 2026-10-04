@@ -1,8 +1,8 @@
 # KazeNhanh 開発ロードマップ
 
-取り組むべき次のタスク : 再設計計画 P2（一次検出MVP）→ P3（選択的SLM）
+取り組むべき次のタスク : 再設計計画 P3（選択的SLM）→ P4（校正・品質受入）
 
-2026-10-04: [再設計監査・計画](../docs/KZN-REDESIGN-PLAN-001.md)を作成。[監査タスク](task-redesign-001-text-evaluation-audit.md)はcompleted、[移行タスク](task-redesign-002-text-evaluation-migration.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0完了。P1も完了。P2〜P5は未着手。以下の9件・44件は旧Git/要約機能の履歴であり、新基盤の進捗や検証済み品質を示しません。
+2026-10-04: [再設計監査・計画](../docs/KZN-REDESIGN-PLAN-001.md)を作成。[監査タスク](task-redesign-001-text-evaluation-audit.md)はcompleted、[移行タスク](task-redesign-002-text-evaluation-migration.md) / [Issue #2](https://github.com/siska-tech/KazeNhanh/issues/2)でP0完了。P1/P2も完了。P3〜P5は未着手。以下の9件・44件は旧Git/要約機能の履歴であり、新基盤の進捗や検証済み品質を示しません。
 
 P0完了: 明示fake注入、実辞書・合成/学習済みGGUFのCPU推論、公式tokenizerの独立参照ID照合を検証。固定モデルセットアップと実モデルCIを追加。Windows/Linux QA・TSan・Criterion/Soakもremote成功。
 
@@ -31,3 +31,5 @@ P0完了: 明示fake注入、実辞書・合成/学習済みGGUFのCPU推論、�
 P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature境界を検証。[API仕様002](../docs/KZN-API-SPEC-002.md)。
 
 2026-10-04: ユーザーの明示承認後にcore/Sudachi/legacyをCargo workspaceへ分離し、0.2へ切替。P1完了。default/minimalの依存境界とモデル不要起動、owned辞書・Mode・原文span・並行評価、旧APIの回帰を検証。[0.2移行ガイド](../docs/migration-0.2.md)。以前の承認待ち記録は解消済み。
+
+2026-10-04: P2一次検出MVPを実装。profile・形態素features・説明可能rules、4用途共通APIとJSON runner。34 fixture全期待一致、正常19件の誤警報0、意味保留4件、SLM呼出0。[検出範囲](../docs/primary-detection.md)。

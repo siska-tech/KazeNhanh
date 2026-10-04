@@ -1,0 +1,34 @@
+{"id":"ocr.normal","text":"東京都で自然な日本語を解析します。","source":"ocr","profile":"ja.ocr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"ocr.amount","text":"請求額は1,234円です。","source":"ocr","profile":"ja.ocr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"ocr.fullwidth","text":"型番ＡＢＣ-１２３を確認しました。","source":"ocr","profile":"ja.ocr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"ocr.name","text":"髙橋さんと齋藤さんが来ました。","source":"ocr","profile":"ja.ocr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"ocr.replacement","text":"請求額は�円です。","source":"ocr","profile":"ja.ocr.v1","category":"warning","expected_verdict":"suspicious","expected_codes":["replacement_character"]}
+{"id":"ocr.bracket","text":"明日（晴れです。","source":"ocr","profile":"ja.ocr.v1","category":"warning","expected_verdict":"suspicious","expected_codes":["unmatched_bracket"]}
+{"id":"asr.filler","text":"えー、明日は雨です。","source":"asr","profile":"ja.asr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"asr.colloquial","text":"そうそう、そうなんだよね。","source":"asr","profile":"ja.asr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"asr.short","text":"はい。","source":"asr","profile":"ja.asr.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"asr.character_repeat","text":"えええええええ","source":"asr","profile":"ja.asr.v1","category":"warning","expected_verdict":"suspicious","expected_codes":["repeated_character"]}
+{"id":"asr.token_repeat","text":"今日は晴れですですです。","source":"asr","profile":"ja.asr.v1","category":"warning","expected_verdict":"suspicious","expected_codes":["repeated_token"]}
+{"id":"llm.screen","text":"会議は明日です。","source":"llm","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"llm.missing_reference","text":"料金は100円です。","source":"llm","profile":"ja.llm.v1","category":"semantic_hold","expected_verdict":"undetermined","expected_codes":[]}
+{"id":"llm.numeric_conflict","text":"料金は100円です。","source":"llm","profile":"ja.llm.v1","category":"semantic_hold","expected_verdict":"undetermined","expected_codes":[],"reference":"料金は200円です。"}
+{"id":"llm.negation_conflict","text":"申請は承認されました。","source":"llm","profile":"ja.llm.v1","category":"semantic_hold","expected_verdict":"undetermined","expected_codes":[],"reference":"申請は承認されていません。"}
+{"id":"llm.match_still_unassessed","text":"会議は明日です。","source":"llm","profile":"ja.llm.v1","category":"semantic_hold","expected_verdict":"undetermined","expected_codes":[],"reference":"会議は明日です。"}
+{"id":"form.name","text":"髙橋","source":"form","profile":"ja.form.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"form.product","text":"XYZ-000000","source":"form","profile":"ja.form.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"form.url","text":"https://example.test/a?x=1.23","source":"form","profile":"ja.form.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"form.required_empty","text":"","source":"form","profile":"ja.form.v1","category":"constraint","expected_verdict":"invalid","expected_codes":["required_empty"]}
+{"id":"form.required_blank","text":" \t ","source":"form","profile":"ja.form.v1","category":"constraint","expected_verdict":"invalid","expected_codes":["required_empty"]}
+{"id":"plain.emoji","text":"自然🙂🙂🙂🙂🙂🙂な文です。","source":"plain_text","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"plain.combining","text":"caféとＡＢＣ","source":"plain_text","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"plain.newlines","text":"  東京都\r\n明日は晴れです。\n","source":"plain_text","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"plain.quote","text":"「料金は100円です。」","source":"plain_text","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"plain.decimal","text":"3.14とhttps://example.testを記録します。","source":"plain_text","profile":"ja.primary.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[]}
+{"id":"plain.unmatched_close","text":"明日は晴れです。）","source":"plain_text","profile":"ja.primary.v1","category":"warning","expected_verdict":"suspicious","expected_codes":["unmatched_bracket"]}
+{"id":"plain.control","text":"通常文\u0000欠落","source":"plain_text","profile":"ja.primary.v1","category":"constraint","expected_verdict":"invalid","expected_codes":["forbidden_control"]}
+{"id":"plain.optional_empty","text":"","source":"plain_text","profile":"ja.primary.v1","category":"unassessed","expected_verdict":"undetermined","expected_codes":[]}
+{"id":"form.optional_empty","text":"","source":"form","profile":"form.optional.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[],"profile_override":{"id":"form.optional.v1","required":false,"max_chars":null,"format":"free_text","forbid_controls":true,"screen_naturalness":false,"repeated_char_min":null,"repeated_token_min":null,"allowed_terms":[]}}
+{"id":"form.numeric_ok","text":"1234","source":"form","profile":"form.numeric.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[],"profile_override":{"id":"form.numeric.v1","required":true,"max_chars":4,"format":"ascii_digits","forbid_controls":true,"screen_naturalness":false,"repeated_char_min":null,"repeated_token_min":null,"allowed_terms":[]}}
+{"id":"form.numeric_invalid","text":"１２３","source":"form","profile":"form.numeric.v1","category":"constraint","expected_verdict":"invalid","expected_codes":["format_mismatch"],"profile_override":{"id":"form.numeric.v1","required":true,"max_chars":4,"format":"ascii_digits","forbid_controls":true,"screen_naturalness":false,"repeated_char_min":null,"repeated_token_min":null,"allowed_terms":[]}}
+{"id":"form.numeric_long","text":"12345","source":"form","profile":"form.numeric.v1","category":"constraint","expected_verdict":"invalid","expected_codes":["max_chars_exceeded"],"profile_override":{"id":"form.numeric.v1","required":true,"max_chars":4,"format":"ascii_digits","forbid_controls":true,"screen_naturalness":false,"repeated_char_min":null,"repeated_token_min":null,"allowed_terms":[]}}
+{"id":"plain.allowlisted_repeat","text":"ああああああ","source":"plain_text","profile":"chat.expressive.v1","category":"normal","expected_verdict":"acceptable","expected_codes":[],"profile_override":{"id":"chat.expressive.v1","required":false,"max_chars":null,"format":"free_text","forbid_controls":true,"screen_naturalness":true,"repeated_char_min":6,"repeated_token_min":3,"allowed_terms":["ああああああ"]}}

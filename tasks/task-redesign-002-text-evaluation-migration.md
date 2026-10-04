@@ -18,7 +18,7 @@ branch: feat/2-text-evaluation-foundation
 
 - [x] P0: 検証基盤復旧（2026-10-04完了）
 - [x] P1: 評価契約・責務分離（2026-10-04完了）
-- [ ] P2: 一次検出MVP
+- [x] P2: 一次検出MVP（2026-10-04完了）
 - [ ] P3: 選択的SLM
 - [ ] P4: 校正・品質受入
 - [ ] P5: 拡張・移行リリース
@@ -120,3 +120,22 @@ P1先行実装の最終ローカル検証: verify.ps1 -Offline成功。core契�
 - [x] REQ/API/ARC-002・README・開発手順・旧推論手順・[0.2移行ガイド](../docs/migration-0.2.md)を同期
 
 P2の標準検出器はまだ設定していない。形態素解析の成功を正常判定にせず、全文未評価を保持する。SLM judge/選択routingはP3で別backendとして実装し、legacy生成を評価経路へ接続しない。移行全体のstatusはprogress、end_dateは未設定のまま。
+
+## P2着手（2026-10-04）
+
+説明可能な文字・形式・反復ルール、全形態素features、用途別profile、JSON runnerと小規模baselineを実装する。OOV単独では異常化せず、意味整合性を未評価として保持。SLM呼出と訂正文生成は0。
+
+## P2一次検出MVP（2026-10-04）
+
+- [x] profile: required/Unicode scalar文字数/ASCII数字形式/禁止control/反復閾値/許容語、実行時snapshotと版管理
+- [x] 一次rule: 文字化け候補、括弧不整合、日本語文字/全形態素の反復。助詞/助動詞を除外しない
+- [x] OOV/正規化差/助詞/助動詞等を構造化featuresへ追加。OOV単独・累積costで異常化しない
+- [x] 明示入力制約をinvalid、候補をsuspicious、必要な意味/参照を未評価/保留へ。二次disabled・SLM呼出0、訂正文フィールドなし
+- [x] 根拠出力は256件＋省略集計に制限し、全入力検査と遅い位置の制約違反の根拠を維持
+- [x] 4用途のJSON CLI/runner、34件の手作業fixture。全34期待一致、正常19件の誤警報0、意味保留4件、SLM呼出0
+- [x] 初回baselineで見つかった許容語の形態素分割後の再警告を修正
+- [x] Report schema v2とprofile_config/metrics.morphologyを文書化。Windows/Linux baseline成果物をCIへ追加
+
+fixture SHA256: 673e88df0ce8284b9b8cab9bb221a618d950631fc63d89302084b1b6483112cd。小規模人工fixtureであり実運用品質のprecision/recall・校正済確率・SLMの品質を保証しない。次はP3（選択的SLM）。threshold/scoreと用途別品質受入はP4で実データ評価する。[一次検出仕様](../docs/primary-detection.md)。
+
+ローカル最終検証: verify.ps1 -Offline成功（workspace全103件: core16・最小公開API1・新Sudachi6・legacy71・旧NLP3・workflow3・並行性2・doctest1）。default/minimal/legacy依存境界とcargo fmtを確認。最終baselineも34/34一致。remote CIはpush後に確認する。

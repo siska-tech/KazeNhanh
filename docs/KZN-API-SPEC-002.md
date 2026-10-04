@@ -14,9 +14,9 @@
 
 `EvaluationEngine::new(Arc<dyn MorphAnalyzer>, EvaluationConfig)`はモデルを必要としない。`evaluate(TextInput)`はResult<Report, Error>、`evaluate_batch(&[TextInput])`は入力順のVec<Result<Report, Error>>を返す。各入力の失敗は他入力を中断しない。
 
-MorphAnalyzerは全形態素を出現順で返す。coreは原文surface・byte span・非重複を確認し、backendが正規化文をsurfaceとして返した場合はエラー。P1ではPrimaryDetectorを設定しない既定エンジンが全文を未評価として返す。形態素解析の成功を正常判定としない。P2で実際の検出器を追加する。
+MorphAnalyzerは全形態素を出現順で返す。coreは原文surface・byte span・非重複を確認し、backendが正規化文をsurfaceとして返した場合はエラー。PrimaryDetectorを設定しないEvaluationEngine::newは全文を未評価として返す。P2の標準japanese_engineはprofile付きPrimaryRulesを注入する。形態素解析の成功だけを正常判定としない。
 
-Reportはoriginal_text/source/domain/annotations、schema_version=`kzn.evaluation.v1`、feature_version=`kzn.morphology.v1`、profile、三軸score、issue、routing、coverage、limitations、provenance、metricsを持つ。訂正文のフィールドは持たない。参照本文は結果へ自動複製しない。
+Reportはoriginal_text/source/domain/annotations、schema_version=`kzn.evaluation.v2`、feature_version=`kzn.morphology.v1`、profile、三軸score、issue、routing、coverage、limitations、provenance、metricsを持つ。訂正文のフィールドは持たない。参照本文は結果へ自動複製しない。
 
 ## Score・保留
 
@@ -24,7 +24,7 @@ validity/naturalness/semantic_consistencyは共通DimensionScore型。valueは0.
 
 semantic scopeはinternal/reference。参照評価を要求したのに文脈が欠落/空ならinsufficient_context。必須軸の未評価があるacceptableはundeterminedへ落とす。heuristicやSLM自己申告値を校正済確率として扱わない。
 
-P1のcoverageは各軸について全文の評価済/未評価spanを明示する。部分評価はまだサポートしない。routingは未実装なのでsecondary_needed=null、status=not_requested、reason=routing_not_implemented。slm_calls=0。候補がないとの判定とは区別する。
+coverageは各軸について全文の評価済/未評価spanを明示する。部分評価はまだサポートしない。P2の一次候補/未解決必須軸はsecondary_needed=true/status=disabled、確定invalidや解決済screeningはfalse/not_requested。detector未設定はnull。slm_calls=0。
 
 ## JSONと検証
 
@@ -35,3 +35,7 @@ API Errorにはgit2、Candle、Sudachiの固有型を含めず、backend名と�
 ## 0.2標準backend
 
 japanese_engine(SudachiConfig, EvaluationConfig)でSudachiを組み立てる。SudachiConfig::from_pathsまたはowned dictionary/settings bytesを指定し、Mode A/B/Cを選ぶ。rootのdefaultはSudachiのみ、no-default-featuresでは任意MorphAnalyzerを注入する。旧APIはlegacy featureへ分離。[具体例と移行](migration-0.2.md)。
+
+## P2一次判定
+
+標準profileの必須軸はvalidity/naturalness。意味軸は未評価で合格へ変換しない。ja.llm.v1はreference scopeと意味軸を必須にする。profile_config・metrics.morphologyを含むschema v2へ更新。[ルール・scoreの範囲とCLI](primary-detection.md)を参照。

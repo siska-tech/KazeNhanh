@@ -22,10 +22,15 @@ tokenizers = { version = "0.19", features = ["unstable_wasm"], optional = true }
 git2 = { version = "0.18", features = ["vendored-libgit2"], optional = true }
 
 [dev-dependencies]
+sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 tempfile = "3"
 criterion = { version = "0.5", features = ["html_reports"] }
 serde_json = "1"
+
+[[example]]
+name = "primary_baseline"
+required-features = ["sudachi"]
 
 [[example]]
 name = "evaluate"

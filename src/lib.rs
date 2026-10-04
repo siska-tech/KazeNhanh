@@ -9,12 +9,30 @@ pub fn japanese_engine(
     config: SudachiConfig,
     evaluation: EvaluationConfig,
 ) -> Result<EvaluationEngine, EvaluationError> {
-    EvaluationEngine::new(
-        std::sync::Arc::new(SudachiAnalyzer::new(config)?),
-        evaluation,
-    )
+    let profile = DomainProfile::builtin(&evaluation.profile_id)?;
+    japanese_engine_with_profile(config, profile, evaluation)
 }
 
 /// Explicit 0.1 compatibility API. Evaluation errors contain no legacy types.
 #[cfg(feature = "legacy")]
 pub use kaze_nhanh_legacy::*;
+
+/// Assemble an explicitly versioned custom primary profile; no SLM is loaded.
+#[cfg(feature = "sudachi")]
+pub fn japanese_engine_with_profile(
+    config: SudachiConfig,
+    profile: DomainProfile,
+    evaluation: EvaluationConfig,
+) -> Result<EvaluationEngine, EvaluationError> {
+    if profile.id != evaluation.profile_id {
+        return Err(EvaluationError::InvalidConfig(
+            "profile identifier mismatch".into(),
+        ));
+    }
+    let rules = PrimaryRules::new(profile)?;
+    Ok(EvaluationEngine::new(
+        std::sync::Arc::new(SudachiAnalyzer::new(config)?),
+        evaluation,
+    )?
+    .with_primary_detector(std::sync::Arc::new(rules)))
+}
