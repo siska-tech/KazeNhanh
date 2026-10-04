@@ -3,10 +3,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
 
+mod secondary;
+pub use secondary::{
+    SecondaryEvaluation, SecondaryFailure, SecondaryJudge, SecondaryJudgeFactory, SecondaryPolicy,
+    SecondaryRequest, SecondaryWorker,
+};
 mod primary;
 pub use primary::{DomainProfile, MorphologyFeatures, PrimaryRules, TextFormat, PRIMARY_RULES_ID};
 
-pub const SCHEMA_VERSION: &str = "kzn.evaluation.v2";
+pub const SCHEMA_VERSION: &str = "kzn.evaluation.v3";
 pub const FEATURE_VERSION: &str = "kzn.morphology.v1";
 
 #[derive(Debug, Error, PartialEq)]
@@ -169,7 +174,9 @@ wire_enum!(RoutingStatus {
     BudgetExceeded,
     Timeout,
     BackendError,
-    Completed
+    Completed,
+    ContextMissing,
+    InvalidOutput
 });
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -391,9 +398,30 @@ impl EvaluationReport {
                 "acceptable cannot contain unresolved warning/error findings".into(),
             ));
         }
-        if self.routing.status == RoutingStatus::Disabled && self.metrics.slm_calls != 0 {
+        if self.metrics.slm_calls > 1
+            || (matches!(
+                self.routing.status,
+                RoutingStatus::Disabled
+                    | RoutingStatus::NotRequested
+                    | RoutingStatus::ContextMissing
+            ) && self.metrics.slm_calls != 0)
+            || (self.routing.status == RoutingStatus::Completed && self.metrics.slm_calls != 1)
+            || (self.routing.status != RoutingStatus::NotRequested
+                && self.routing.secondary_needed != Some(true))
+            || (matches!(
+                self.routing.status,
+                RoutingStatus::BudgetExceeded
+                    | RoutingStatus::Timeout
+                    | RoutingStatus::BackendError
+                    | RoutingStatus::InvalidOutput
+                    | RoutingStatus::ContextMissing
+            ) && self.verdict == Verdict::Acceptable)
+            || (!self.reference_provided
+                && self.scores.semantic_consistency.scope == ScoreScope::Reference
+                && self.scores.semantic_consistency.status == ScoreStatus::Evaluated)
+        {
             return Err(EvaluationError::Contract(
-                "disabled secondary routing cannot claim SLM calls".into(),
+                "inconsistent secondary routing/call/context metadata".into(),
             ));
         }
         if self.metrics.morpheme_count != self.metrics.morphology.token_count {
@@ -459,6 +487,7 @@ pub struct EvaluationEngine {
     analyzer: Arc<dyn MorphAnalyzer>,
     detector: Option<Arc<dyn PrimaryDetector>>,
     config: EvaluationConfig,
+    secondary: Option<Arc<SecondaryWorker>>,
 }
 impl EvaluationEngine {
     pub fn new(
@@ -483,6 +512,7 @@ impl EvaluationEngine {
         Ok(Self {
             analyzer,
             detector: None,
+            secondary: None,
             config,
         })
     }
@@ -641,12 +671,12 @@ impl EvaluationEngine {
             }
         })
         .collect();
-        let report = EvaluationReport {
+        let mut report = EvaluationReport {
             schema_version: SCHEMA_VERSION.into(),
             feature_version: FEATURE_VERSION.into(),
             original_text: input.text.into(),
             language: input.language.into(),
-            source: input.source,
+            source: input.source.clone(),
             domain: input.domain.map(str::to_owned),
             annotations: input.annotations.to_vec(),
             reference_provided: input.reference.is_some(),
@@ -678,6 +708,8 @@ impl EvaluationEngine {
             },
         };
         report.validate()?;
+        self.apply_secondary(&input, &mut report);
+        report.validate()?;
         Ok(report)
     }
     pub fn evaluate_batch(
@@ -697,3 +729,6 @@ mod tests;
 
 #[cfg(test)]
 mod primary_tests;
+
+#[cfg(test)]
+mod secondary_tests;

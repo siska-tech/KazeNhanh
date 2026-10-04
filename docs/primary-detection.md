@@ -57,4 +57,6 @@ Windows Core i7-1360P / debugの参考測定: 辞書load約4.6秒、warm fixture
 
 ## Schemaと互換性
 
-Report schemaを`kzn.evaluation.v2`へ更新し、profile_configとmetrics.morphology、一次判定に基づくroutingを明示する。v1 reportを黙ってv2へ解釈せず、必要なら呼出側で明示変換する。0.2は引き続き開発版。legacy 0.1の生成APIは変更しない。
+P2はschema v2でprofile_configとmetrics.morphology、一次routingを追加した。現在はP3制御契約の`kzn.evaluation.v3`。旧schemaを黙って解釈せず、必要なら呼出側で明示変換する。0.2は引き続き開発版。legacy 0.1の生成APIは変更しない。
+
+P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。

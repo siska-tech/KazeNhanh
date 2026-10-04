@@ -21,7 +21,7 @@ let report = engine.evaluate(TextInput::new("東京都で日本語を解析し�
 
 dictionary/settingsはowned bytesとしてengineに保持される。static化やBox::leakは不要。辞書・設定SHA256とModeをprovenanceへ記録し、助詞・助動詞を含む全形態素を原文位置で解析する。
 
-P2の標準経路はprofileの制約と少数ルールを評価する。validity/naturalnessはheuristic、semantic_consistencyはnull。必要な二次判定はdisabled/保留で、SLM呼出0。形態素解析成功だけを「妥当」へ置換しない。独自PrimaryDetectorも注入できるが、品質受入は利用者が検証する。Report schemaはv2へ更新。
+P2の標準経路はprofileの制約と少数ルールを評価する。validity/naturalnessはheuristic、semantic_consistencyはnull。必要な二次判定はdisabled/保留で、SLM呼出0。形態素解析成功だけを「妥当」へ置換しない。独自PrimaryDetectorも注入できるが、品質受入は利用者が検証する。Report schemaはP3制御契約のv3へ更新。
 
 ```powershell
 cargo run --locked --example evaluate -- "東京都で自然な日本語を解析します。"
@@ -54,6 +54,8 @@ kaze_nhanh = { path = "/path/to/KazeNhanh", default-features = false, features =
 | no-default + legacy | 有効 | 無効 | 有効 | 旧APIの互換利用 |
 | mock_inference | 有効 | defaultに従う | 有効 | 明示fake workflow試験 |
 
-mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ切り替えない。SLM judgeはP3で別の任意backendとして追加予定であり、legacy推論featureを新評価エンジンへ接続しない。
+mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ切り替えない。P3のSecondaryJudge/Factory/Workerはbackend非依存契約として利用できる。実SLM adapterは未実装で、legacy推論featureを新評価エンジンへ接続しない。
 
 `verify.ps1 -Offline`はcore/default/minimalの依存禁止、実Sudachi、Modeと原文span、並行評価、旧本番runtime、fake workflow、全workspace試験を確認する。辞書はsetup-dev.ps1で事前取得する。
+
+P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。

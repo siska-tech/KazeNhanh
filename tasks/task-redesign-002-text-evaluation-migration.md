@@ -139,3 +139,21 @@ P2の標準検出器はまだ設定していない。形態素解析の成功を
 fixture SHA256: 673e88df0ce8284b9b8cab9bb221a618d950631fc63d89302084b1b6483112cd。小規模人工fixtureであり実運用品質のprecision/recall・校正済確率・SLMの品質を保証しない。次はP3（選択的SLM）。threshold/scoreと用途別品質受入はP4で実データ評価する。[一次検出仕様](../docs/primary-detection.md)。
 
 ローカル最終検証: verify.ps1 -Offline成功（workspace全103件: core16・最小公開API1・新Sudachi6・legacy71・旧NLP3・workflow3・並行性2・doctest1）。default/minimal/legacy依存境界とcargo fmtを確認。最終baselineも34/34一致。remote CIはpush後に確認する。
+
+## P3着手（2026-10-04）
+
+backend非依存のSecondaryJudge/Factory、遅延load・有界worker、共有呼出予算・deadline、厳格出力検証と保留を実装する。実モデルの日本語judge・tokenizer bundle・CPU SLO検証は別の受入条件で、fake試験を実モデル品質の証拠にしない。
+
+### P3制御契約の実装結果
+
+- [x] SecondaryJudge/Factory、Arc共有worker、候補のみ遅延load、load失敗cache
+- [x] worker累積呼出/byte/token予算、1worker＋有界queue、queue/loadを含むdeadline
+- [x] reference不足は推論0、不正出力・故障・panic・timeout・queue飽和は保留
+- [x] 期限切れ待機requestをcancel、実行開始の有無でslm_callsを記録。一次根拠を保持
+- [x] 厳格JSON/軸/score/span/出力上限検証。暫定model scoreに校正済確率を付けない
+- [x] schema v3、実Sudachi＋明示fakeのASR助動詞span接続、core secondary試験のTSan登録
+- [x] verify.ps1 -Offline成功。workspace113件（core25・最小API1・新Sudachi7・legacy71・旧NLP3・workflow3・並行性2・doctest1）。最終core25件とbaseline34/34も成功、default CLIのSLM呼出0
+- [ ] 日本語実モデルbackend・固定bundle/token ID照合・context/KV/協調deadlineの実CPU試験
+- [ ] OCR/ASR品質・CPU latency/RSS/呼出率・事前SLO受入
+
+ユーザー指定の優先用途はOCR/ASRの不自然さ検出。P3はprogressを維持し、実モデル試験をfakeの成功で代替しない。[制御契約と残作業](../docs/secondary-judging.md)。非協調backendの実行中処理をtimeoutで強制停止する保証はない。最新CIはpush後に確認する。

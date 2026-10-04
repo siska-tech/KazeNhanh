@@ -144,3 +144,72 @@ fn real_primary_rules_keep_auxiliaries_and_return_the_original_repeated_range() 
     assert_eq!(report.verdict, Verdict::Suspicious);
     assert_eq!(report.metrics.slm_calls, 0);
 }
+
+#[test]
+fn real_sudachi_routes_asr_auxiliary_repetition_to_explicit_fake_only() {
+    use kaze_nhanh::*;
+    use std::{
+        sync::atomic::{AtomicUsize, Ordering},
+        time::Instant,
+    };
+    struct Factory(Arc<AtomicUsize>);
+    impl SecondaryJudgeFactory for Factory {
+        fn artifacts(&self) -> Vec<ArtifactIdentity> {
+            vec![ArtifactIdentity {
+                component: "fixture".into(),
+                id: "asr.explicit-fake.v1".into(),
+                sha256: None,
+            }]
+        }
+        fn load(&self, _: Instant) -> Result<Box<dyn SecondaryJudge>, SecondaryFailure> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(Box::new(Judge))
+        }
+    }
+    struct Judge;
+    impl SecondaryJudge for Judge {
+        fn judge(
+            &mut self,
+            request: &SecondaryRequest,
+        ) -> Result<SecondaryEvaluation, SecondaryFailure> {
+            assert_eq!(request.text, "今日は晴れですですです。");
+            assert_eq!(request.profile_id, "ja.asr.v1");
+            let issue = request
+                .primary_issues
+                .iter()
+                .find(|i| i.code == "repeated_token")
+                .unwrap();
+            assert_eq!(
+                &request.text[issue.span.start()..issue.span.end()],
+                "ですですです"
+            );
+            Ok(SecondaryEvaluation {
+                naturalness: Some(UnitScore::new(0.2).unwrap()),
+                semantic_consistency: None,
+                issues: vec![],
+            })
+        }
+    }
+    let loads = Arc::new(AtomicUsize::new(0));
+    let worker = Arc::new(
+        SecondaryWorker::new(Arc::new(Factory(loads.clone())), SecondaryPolicy::default()).unwrap(),
+    );
+    let profile = DomainProfile::builtin("ja.asr.v1").unwrap();
+    let engine = EvaluationEngine::new(analyzer(), profile.evaluation_config())
+        .unwrap()
+        .with_primary_detector(Arc::new(PrimaryRules::new(profile).unwrap()))
+        .with_secondary_worker(worker);
+    let normal = engine.evaluate(TextInput::new("今日は晴れです。")).unwrap();
+    assert_eq!(normal.metrics.slm_calls, 0);
+    assert_eq!(loads.load(Ordering::SeqCst), 0);
+    let mut input = TextInput::new("今日は晴れですですです。");
+    input.source = SourceKind::Asr;
+    let report = engine.evaluate(input).unwrap();
+    assert_eq!(report.source, SourceKind::Asr);
+    assert_eq!(report.metrics.slm_calls, 1);
+    assert_eq!(report.routing.status, RoutingStatus::Completed);
+    assert_eq!(report.verdict, Verdict::Suspicious);
+    assert_eq!(loads.load(Ordering::SeqCst), 1);
+    assert!(report.metrics.morphology.auxiliary_count >= 3);
+    report.validate().unwrap();
+}

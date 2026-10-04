@@ -1,6 +1,6 @@
 # KZN-API-SPEC-002: テキスト評価契約
 
-2026-10-04 / P1。新しいRust APIの契約。既存0.1の要約APIとは別の意味を持つ。
+2026-10-04 / P1〜P3制御契約。新しいRust APIの契約。既存0.1の要約APIとは別の意味を持つ。
 
 ## 入力と原文
 
@@ -16,7 +16,7 @@
 
 MorphAnalyzerは全形態素を出現順で返す。coreは原文surface・byte span・非重複を確認し、backendが正規化文をsurfaceとして返した場合はエラー。PrimaryDetectorを設定しないEvaluationEngine::newは全文を未評価として返す。P2の標準japanese_engineはprofile付きPrimaryRulesを注入する。形態素解析の成功だけを正常判定としない。
 
-Reportはoriginal_text/source/domain/annotations、schema_version=`kzn.evaluation.v2`、feature_version=`kzn.morphology.v1`、profile、三軸score、issue、routing、coverage、limitations、provenance、metricsを持つ。訂正文のフィールドは持たない。参照本文は結果へ自動複製しない。
+Reportはoriginal_text/source/domain/annotations、schema_version=`kzn.evaluation.v3`、feature_version=`kzn.morphology.v1`、profile、三軸score、issue、routing、coverage、limitations、provenance、metricsを持つ。訂正文のフィールドは持たない。参照本文は結果へ自動複製しない。
 
 ## Score・保留
 
@@ -38,4 +38,6 @@ japanese_engine(SudachiConfig, EvaluationConfig)でSudachiを組み立てる。S
 
 ## P2一次判定
 
-標準profileの必須軸はvalidity/naturalness。意味軸は未評価で合格へ変換しない。ja.llm.v1はreference scopeと意味軸を必須にする。profile_config・metrics.morphologyを含むschema v2へ更新。[ルール・scoreの範囲とCLI](primary-detection.md)を参照。
+標準profileの必須軸はvalidity/naturalness。意味軸は未評価で合格へ変換しない。ja.llm.v1はreference scopeと意味軸を必須にする。profile_config・metrics.morphologyを含むschema v3へ更新。[ルール・scoreの範囲とCLI](primary-detection.md)を参照。
+
+P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。
