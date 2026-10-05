@@ -25,6 +25,36 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/prepare-ocr-synt
 
 ## 評価へ接続する次の作業
 
-今回の登録ではKazeNhanh推論・閾値探索は実行していない。既存recognition_samplesはnumeric confidenceを要求するため、nullをtyped missingへ変換する対応が先に必要。提供元のconfidence_scaleはCTC emitted-token probabilityのbox文字数重み付き平均との宣言で、転記正解確率ではない。raw値と定義を保持し、confidence ruleのtarget/decoder等を推測で補わない。
+登録時点ではKazeNhanh推論・閾値探索は未実施だった。その後nullをtyped missingへ変換するrunner対応とdevelopment比較を追加した（次節）。提供元のconfidence_scaleはCTC emitted-token probabilityのbox文字数重み付き平均との宣言で、転記正解確率ではない。raw値と定義を保持し、confidence ruleのtarget/decoder等を推測で補わない。
 
 trainの参照だけからsmall/core/fullそれぞれの統計assetを作り、developmentで既存rules/統計/候補条件の比較を行う予定。calibration/testの転記を資産学習へ混ぜない。テストを見る前に採用条件を決める。人工画像内の性能と実画像への一般化を区別し、追加の実OCR/ASRが必要になった時点でユーザーに依頼する。画像再生成・OCR/ASR再実行は不要。
+## Development比較runner（2026-10-06）
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/evaluate-ocr-synth-1k.ps1 -DatasetRoot C:/Users/Shion/Documents/Projects/kzn-dataset -Offline
+```
+
+固定hash/split監査を再実行し、train.references.jsonlの500件のtranscriptionのみをtrain.clean.jsonlへ写す。small/core/full（20250129、Mode C）それぞれでPOS付きv2統計assetを生成する。混合ライセンス表示と参照行の出典を保持し、domainはこの集合専用ja.ocr.synth.v1とする。
+
+development.inputs.jsonlの100件について、既定policyと既存opt-in sparse reviewを比較。recognition_qualityでraw.v1の確認済み転記との差を集計し、5条件のfeature ablationも出す。条件や閾値をこの結果に合わせて変更しない。calibration/testは取り込み時の分割監査のみで、資産学習・推論・品質集計へ渡さない。
+
+recognition_samplesはconfidence=nullをMissing/score=Noneとして扱い、数値0はObservedとして区別する。confidenceフィールド自体の欠落や文字列/真偽値は拒否。raw定義confidence_scaleはannotationへ保持し、typed scoreの方向・target等を推測しない。入力上限16 MiB/4096件を追加。nullの空認識にspanがない場合も原文の空spanを保持し、原資料全体の完全性を保証しない。
+
+この評価で、頻度比率のJSON往復後に厳密検証が失敗する問題を発見した。coreのserde_jsonにfloat_roundtripを指定し、値の読み戻しを維持する。小数の誤差を許して契約検証を緩める方法は採らず、複数の分母を使った回帰テストで再現/修正を確認した。
+
+詳細report/統計asset/集計はtarget/kzn-ocr-synth-1k内のみ。CIではnull処理と小数往復の人工契約を検証する。実OCR画像での品質受入やASR性能は未評価である。
+### Development 100件の結果
+
+raw.v1で一致66/不一致34。全件verified宣言、confidence欠測8件。3辞書とも既定はreview0/保留100、sparseはreview24/保留76（確認済み一致7・不一致17）。sparseの不一致review recall=17/34=50%、precision=17/24≈70.8%、一致へのreview率=7/66≈10.6%。low_riskは0、risk=null、SLM呼出0。これはdevelopment観察であり品質受入ではない。
+
+| 条件 | small 該当一致/不一致 | core 該当一致/不一致 | full 該当一致/不一致 |
+| --- | --- | --- | --- |
+| sparse | 7 / 17 | 7 / 17 | 7 / 17 |
+| POS未観測 | 30 / 18 | 31 / 19 | 32 / 19 |
+| 文字種遷移 | 64 / 24 | 64 / 24 | 64 / 24 |
+| sparse AND POS | 0 / 10 | 1 / 11 | 1 / 11 |
+| POS AND 文字種遷移 | 30 / 17 | 31 / 17 | 32 / 17 |
+
+POS/文字種は単独で不一致の証明にならない。sparseへのPOS ANDは誤警報を減らすが、拾える不一致も減らしている。POSを使う条件はsmall/coreで不一致8件、fullで一致1件＋不一致8件が適用不能（pair不足・空入力等）。文字種遷移も不一致8件が適用不能。適用不能を陰性・正常へ変換しない。既存条件は変更せず、この集合で採用閾値を探索しない。
+
+3辞書×2policyの全600reportについてID/原文/raw confidence/null保持、risk未算出、SLM0を照合した。同じ100件を繰り返した比較なのでサンプル数を600と扱わない。

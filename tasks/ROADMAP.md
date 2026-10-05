@@ -69,3 +69,5 @@ R2条件比較（2026-10-05）: POS/文字種と既存統計条件の5比較・�
 R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値比較・適用不能を実装。core policy接続/fusionと閾値受入は未完了。[仕様](../docs/recognition-confidence-review.md)。
 
 2026-10-06: kzn-ocr-synth-1kの1,000件を登録、split監査とローカル推論/参照分離を完了。null confidence対応とtrain限定統計asset・3辞書development評価が次段階。[詳細](../docs/ocr-synth-1k.md)。
+
+2026-10-06: OCR 1kのnull confidence対応、train限定統計assetと3辞書development比較を実装。統計頻度のJSON往復不整合も回帰テスト付きで修正。calibration/testの推論なし。[結果](../docs/ocr-synth-1k.md)。

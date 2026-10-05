@@ -628,3 +628,19 @@ fn pos_engine_roundtrip_shares_analysis_without_changing_decision() {
     row.value.as_mut().unwrap()["pos"]["frequencies"]["unseen_fraction"] = serde_json::json!(0.0);
     assert!(bad.validate().is_err());
 }
+
+#[test]
+fn frequency_fractions_survive_json_roundtrip_without_relaxing_validation() {
+    let stats = LightweightStatistics::new(asset()).unwrap();
+    for length in 2..100 {
+        let text = format!("{}🙂", "猫".repeat(length));
+        let observed = stats
+            .observe(&text, Some("fixture"), &analysis(&text))
+            .unwrap();
+        let encoded = serde_json::to_string(&observed).unwrap();
+        let decoded: StatisticsObservation = serde_json::from_str(&encoded).unwrap();
+        decoded
+            .validate(&text, Some("fixture"), stats.artifact_id())
+            .unwrap();
+    }
+}

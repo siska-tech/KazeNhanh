@@ -31,6 +31,7 @@ try {
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'evaluation_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_contracts') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--test', 'recognition_source_evidence') + $networkArgs)
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--example', 'recognition_samples') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--test', 'evaluation_nlp') + $networkArgs)
     & (Join-Path $PSScriptRoot 'test-sudachi-setup.ps1')
     & (Join-Path $PSScriptRoot 'verify-statistics.ps1') -Offline:$Offline

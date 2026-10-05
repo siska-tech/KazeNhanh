@@ -336,3 +336,15 @@ workspace全体all-features/offlineテスト、最小lib check、format/diff・�
 - [ ] runnerのnull confidence対応、train限定統計asset、small/core/full development比較
 
 [仕様](../docs/ocr-synth-1k.md)。status=progress。test条件検討・推論は未実施、再認識不要。
+
+## OCR 1k development比較（2026-10-06）
+- [x] null confidenceをMissing/Noneへ、0はObserved、定義をraw annotation保持
+- [x] train500参照だけのPOS付きasset、small/core/full development100比較runner
+- [x] 頻度比率JSON往復の再現テストとfloat_roundtrip修正、null契約CI登録
+- [ ] source融合・代表データの受入条件、校正/test評価
+
+[手順](../docs/ocr-synth-1k.md)。status=progress。calibration/testを推論へ渡さない。
+
+比較結果: 3辞書とも既定保留100、sparse review24（不一致17/34、一致7/66）。POS ANDは拾える不一致も減少し、条件変更なし。6出力の全ID/原文/raw/null/SLM0/risk未算出を検証。core53件とrunner null契約成功。
+
+workspace全体all-features/offlineテスト、format/diff、文書リンク、PowerShell構文も成功。前回f63ed9cのremote CI成功。

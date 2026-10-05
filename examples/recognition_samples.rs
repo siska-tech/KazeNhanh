@@ -1,6 +1,17 @@
 //! Model-free observation runner for user-provided OCR. Gold/reference fields are never read.
 use kaze_nhanh::source_adapters::*;
 use kaze_nhanh::*;
+fn confidence(sample: &serde_json::Value) -> Result<Option<f64>, &'static str> {
+    match sample.get("confidence") {
+        Some(serde_json::Value::Null) => Ok(None),
+        Some(value) => value
+            .as_f64()
+            .filter(|v| v.is_finite())
+            .map(Some)
+            .ok_or("confidence must be finite numeric or null"),
+        None => Err("confidence field is required; use null for missing"),
+    }
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args_os().skip(1).collect::<Vec<_>>();
     let sparse_review = args.last().is_some_and(|a| a == "--sparse-review");
@@ -46,17 +57,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         engine = engine.with_sparse_statistics_review();
     }
+    if std::fs::metadata(&args[0])?.len() > 16 * 1024 * 1024 {
+        return Err("dataset exceeds 16 MiB".into());
+    }
     let data = std::fs::read_to_string(&args[0])?;
     let mut ids = std::collections::HashSet::new();
     let mut reports = Vec::new();
     for line in data.lines().filter(|line| !line.trim().is_empty()) {
+        if reports.len() >= 4096 {
+            return Err("dataset exceeds 4096 segments".into());
+        }
         let sample: serde_json::Value = serde_json::from_str(line)?;
         let text = sample["text"].as_str().ok_or("text is required")?;
         let id = sample["id"].as_str().ok_or("id is required")?;
         let engine_id = sample["engine"].as_str().ok_or("engine is required")?;
-        let raw = sample["confidence"]
-            .as_f64()
-            .ok_or("numeric confidence is required")?;
+        let raw = confidence(&sample)?;
         if !ids.insert(id.to_owned()) {
             return Err("duplicate sample identity".into());
         }
@@ -78,9 +93,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     id: "recognizer-segment-confidence".into(),
                     span: ByteSpan::whole(text),
                     granularity: ConfidenceGranularity::Segment,
-                    status: RecognitionEvidenceStatus::Observed,
-                    score: Some(RawScore {
-                        value: raw,
+                    status: if raw.is_some() {
+                        RecognitionEvidenceStatus::Observed
+                    } else {
+                        RecognitionEvidenceStatus::Missing
+                    },
+                    score: raw.map(|value| RawScore {
+                        value,
                         meaning: ConfidenceMeaning::EngineScore,
                         direction: ConfidenceDirection::Unknown,
                         range: None,
@@ -88,7 +107,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         target: None,
                     }),
                     aggregation: None,
-                    reason: None,
+                    reason: raw
+                        .is_none()
+                        .then(|| "recognizer_confidence_not_provided".into()),
                     dependencies: vec!["recognizer-decoder".into()],
                 }],
                 candidates: CandidateEvidence::missing(),
@@ -98,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let annotations = [SourceAnnotation {
             span: ByteSpan::whole(text),
             data: serde_json::json!({"ocr_engine":engine_id,"ocr_confidence":raw,"document_id":document,
-                "image_position":sample["image_position"],"image_column_from_right":sample["image_column_from_right"]}),
+                "confidence_scale":sample["confidence_scale"],"image_position":sample["image_position"],"image_column_from_right":sample["image_column_from_right"]}),
         }];
         let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, document, id);
         input.domain = statistics_domain;
@@ -134,4 +155,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(path, serde_json::to_string_pretty(&output)?)?;
     println!("{summary}");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn null_is_missing_zero_is_observed_and_malformed_values_fail() {
+        assert_eq!(
+            confidence(&serde_json::json!({"confidence":null})),
+            Ok(None)
+        );
+        assert_eq!(
+            confidence(&serde_json::json!({"confidence":0})),
+            Ok(Some(0.0))
+        );
+        assert_eq!(
+            confidence(&serde_json::json!({"confidence":0.99})),
+            Ok(Some(0.99))
+        );
+        for value in [
+            serde_json::json!({}),
+            serde_json::json!({"confidence":"0.9"}),
+            serde_json::json!({"confidence":false}),
+        ] {
+            assert!(confidence(&value).is_err());
+        }
+    }
 }

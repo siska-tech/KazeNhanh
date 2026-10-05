@@ -258,3 +258,7 @@ adapterに明示ruleによるconfidence比較を追加。認識器/版/profile/d
 ## 23. ユーザー提供1,000件の登録（2026-10-06）
 
 kzn-ocr-synth-1kを固定hashで登録。合成画像の実OCR結果であり、実撮影/ASR品質とは区別する。train500/calibration200/test200/development100の監査と原文保持・gold分離を確認。null confidence78件を保持。今回は取り込みまで、推論・閾値探索なし。[評価方針](ocr-synth-1k.md)。
+
+## 24. OCR 1k development比較（2026-10-06）
+
+train500件の参照のみから3辞書のPOS付き統計assetを作成し、development100件で既定/sparse policyと特徴条件を比較。null confidenceを欠測として保持。JSON小数往復の厳密検証失敗を再現しfloat_roundtripで修正。条件調整・calibration/test推論・再認識は行わない。[手順と結果](ocr-synth-1k.md)。R2品質受入は未完了。
