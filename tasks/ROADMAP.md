@@ -73,3 +73,5 @@ R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値�
 2026-10-06: OCR 1kのnull confidence対応、train限定統計assetと3辞書development比較を実装。統計頻度のJSON往復不整合も回帰テスト付きで修正。calibration/testの推論なし。[結果](../docs/ocr-synth-1k.md)。
 
 2026-10-06: confidence ruleのevaluate/combineと別namespaceの統合reportを追加。base保持・JSON再検証・適用不能理由を実装。source定義/品質runner・閾値受入は残作業。[仕様](../docs/recognition-confidence-review.md)。
+
+2026-10-06: source統合reportのoffline品質集計を実装。最終/base判断を分離、旧形式互換、rule ID衝突拒否。実データsource定義と閾値採用は残作業。

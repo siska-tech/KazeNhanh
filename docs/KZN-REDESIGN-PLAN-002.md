@@ -266,3 +266,7 @@ train500件の参照のみから3辞書のPOS付き統計assetを作成し、dev
 ## 25. Source reviewのengine接続（2026-10-06）
 
 facadeでConfidenceReviewRule.evaluate/combineを追加。base reportを保持した別namespaceに設定・assessment・最終OR判断を保存し、JSON検証で再計算。既存の一次/候補/統計reviewを取り消さず、未提供/不適用は保留理由を残す。risk推定とlow_risk受入はしない。[契約](recognition-confidence-review.md)。実データsource定義に基づくruleと統合品質runnerは未実装。
+
+## 26. Source統合の品質集計（2026-10-06）
+
+recognition_qualityにsource専用envelopeを追加。wrapper検証後に最上位decisionを集計し、base_summaryを併記する。同ID異設定ruleを拒否。feature ablationはbase証拠のみと明記。旧core観察形式は維持。[契約](recognition-confidence-review.md)。実データconfidenceの採用・閾値探索は未実施。

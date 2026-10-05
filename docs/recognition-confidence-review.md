@@ -46,6 +46,19 @@ let json = serde_json::to_string(&combined)?;
 
 JSONにはrule/assessmentの全フィールドを保存。unknown field拒否、`validate`はbase検証後に保存ルールからassessment・OR判断・理由を再計算して照合する。設定や原本の真正性・閾値の有効性を証明する検証ではない。出力改ざんを構造的に拒否するが、運用時のasset信頼管理は別責務。
 
-旧core API/schemaは変更しない。新しいwrapperを既存recognition_qualityの観察JSONとして直接渡すことはできない。同CLIの既存品質結果はbase/core判断の結果である。source統合の品質評価runner・実際のsource定義に基づくrule採用は今後の作業。
+旧core API/schemaは変更しない。統合reportを直接旧観察schemaへ入れず、source専用envelopeでrecognition_qualityへ渡す（次節）。実際のsource定義に基づくrule採用は今後の作業。
 
 人工契約でOCR/ASRの追加review、high-confidence+候補差のreview保持、source/domain欠落時の保留・理由、JSON往復/改ざん、設定不正を解析前に拒否、解析1回を確認。今回の追加で既存OCR 1kに閾値を適用したとは主張しない。
+## 統合結果の品質集計（2026-10-06）
+
+recognition_qualityは次のenvelopeを受け取る。
+
+```json
+{"schema_version":"kzn.recognition.source_review_observation.v1","reports":[]}
+```
+
+reportsにはSourceReviewReportを格納する（空集合は採点時に拒否）。CLI引数は従来と同じreferences.jsonl / observations.json / summary.jsonと任意の--feature-ablation。各wrapperをvalidateし、原文・ID/source/documentと参照を照合した後、最上位decisionを採点する。summaryは統合後、base_summaryはcore判断。decision_scope=source_reviewとinput_schemaを出力し、source_rulesへrule snapshotを記録する。同じrule IDに異なるsnapshotが混在した入力は拒否。
+
+feature_ablationは引き続きbaseのテキスト特徴に対する仮条件であり、confidenceとの融合比較ではない。feature_ablation_scope=base_evidence_onlyを併記する。未確認の転記は品質の分母から除外し、分母0はnull。入力hash・quality_accepted=false・development観察の制約を維持する。
+
+旧kzn.recognition.observation.v1の入力/出力は変更しない。モデル・辞書再ロードや閾値探索は行わない。この追加は保存済み統合結果の採点経路であり、OCR 1kへのconfidence適用の品質結果ではない。

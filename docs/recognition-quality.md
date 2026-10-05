@@ -45,3 +45,5 @@ decisionごとに「確認済み一致・確認済み不一致・未確認」の
 ## 特徴条件比較（2026-10-05）
 
 CLI末尾の--feature-ablationでPOS/文字種等の5条件をoffline比較する。元reportと通常summaryは変更せず、欠測/未確認を別集計。[仕様と3辞書の結果](recognition-feature-ablation.md)。
+
+source専用envelope kzn.recognition.source_review_observation.v1にも対応（2026-10-06）。wrapperを検証し、最終decisionとcore判断を別集計する。[source品質契約](recognition-confidence-review.md)。

@@ -358,3 +358,13 @@ workspace全体all-features/offlineテスト、format/diff、文書リンク、P
 [仕様](../docs/recognition-confidence-review.md)。source契約20テスト成功。status=progressを維持、既存datasetの新規推論・閾値調整なし。
 
 最小lib check、workspace全体all-features/offlineテスト、format/diff・文書リンク検証成功。前回c32c90fのremote CI成功。
+
+## Source統合品質集計（2026-10-06）
+- [x] source envelope検証・最上位decision集計・base_summary併記
+- [x] rule snapshot追跡/同ID異設定拒否・base特徴scope・旧形式互換
+- [x] OCR/ASR、未確認、改ざん/重複/照合、旧dispatchの追加3テスト
+- [ ] 実データsource定義に基づくrule採用・比較・品質受入
+
+品質集計11テスト成功。status=progress、今回の変更でOCR 1kのconfidence品質を測定したとは扱わない。前回のIssue/PR同期は利用上限による自動承認レビュー失敗で未実行だったため、今回再開した。
+
+全example all-features/offline check、保存済みdevelopment100件の旧CLI出力一致、format/diff・文書リンク成功。

@@ -111,3 +111,5 @@ source固有confidenceの明示ruleをadapterへ追加（2026-10-05）。尺度�
 OCR 1kのtrain500件によるPOS付き統計assetと、small/core/fullのdevelopment100件比較runnerを追加（2026-10-06）。null confidence対応・小数のJSON往復修正を含む。[評価手順](docs/ocr-synth-1k.md)。
 
 source confidenceのengine接続・統合レポートを追加（2026-10-06）。既存reviewと確認要求をOR統合し、高confidenceでもreviewを取り消さない。[契約](docs/recognition-confidence-review.md)。
+
+source統合レポートの品質集計を追加（2026-10-06）。統合後summaryとbase_summaryを分離し、旧観察形式を維持。[契約](docs/recognition-confidence-review.md)。
