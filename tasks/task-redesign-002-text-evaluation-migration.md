@@ -388,3 +388,12 @@ runner契約2件、全example all-features/offline check、3辞書比較、全60
 [結果](../docs/recognition-fusion-baseline.md)。status=progress。confidence-only flag不一致26/34・一致1/66、統合flag不一致34/34・一致64/66。新たな閾値調整・calibration/test評価なし。
 
 検証: fusion4テスト、全example all-features/offline check、3辞書runner、small再実行のbyte/hash一致、format/diff・PowerShell構文・文書リンク成功。前回c3cc23d CI成功。
+
+## OOF統計特徴・融合再比較（2026-10-06）
+- [x] document/origin/転記groupの5-fold、補集合corpus hash、各reportの資産binding
+- [x] goldを含まない入力射影、精度を保つreport統合、追加3テスト
+- [x] small/core/fullで同じ学習条件を再比較。統合flag不一致28/34・一致2/66
+- [x] 外部生成コード更新と元データ不変を識別し、以前の監査済みsource定義を固定snapshotとして再利用
+- [ ] 適用範囲/CPU費用・独立受入条件、校正とtest受入
+
+[結果](../docs/recognition-fusion-baseline.md)。Status=progress。fusion全7テスト、全example all-features/offline check、3辞書matrix、small再実行hash一致、PowerShell構文とformat/diff成功。calibration/test推論・runtime変更なし。性能改善はdevelopment観察に限定する。

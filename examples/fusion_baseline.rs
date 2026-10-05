@@ -5,6 +5,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+#[path = "fusion_baseline/oof.rs"]
+mod oof;
 const N: usize = 8;
 const FEATURES: [&str; N] = [
     "confidence",
@@ -27,7 +29,7 @@ struct Reference {
     comparison_policy: String,
     split: String,
 }
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Observation {
     schema_version: String,
@@ -115,6 +117,9 @@ fn extract(r: &SourceReviewReport) -> Result<([Option<f64>; N], Value)> {
     Ok((x, signature))
 }
 fn load(refs: &[u8], reports: &[u8], split: &str) -> Result<Data> {
+    load_mode(refs, reports, split, None)
+}
+fn load_mode(refs: &[u8], reports: &[u8], split: &str, plan: Option<&oof::Plan>) -> Result<Data> {
     let input: Observation = serde_json::from_slice(reports)?;
     if input.schema_version != "kzn.recognition.source_review_observation.v1"
         || input.reports.len() > 4096
@@ -124,7 +129,11 @@ fn load(refs: &[u8], reports: &[u8], split: &str) -> Result<Data> {
     let mut by_id = BTreeMap::new();
     let mut signature = None;
     for report in input.reports {
-        let (x, s) = extract(&report)?;
+        let (x, mut s) = extract(&report)?;
+        if let Some(plan) = plan {
+            plan.bind(&report, split == "train")?;
+            oof::normalize_signature(&mut s);
+        }
         if signature.as_ref().is_some_and(|old| old != &s) {
             return Err("mixed feature/source/artifact identities".into());
         }
@@ -292,21 +301,68 @@ fn evaluate(model: &Model, rows: &[Row]) -> Value {
 }
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    if args.len() != 5 {
-        return Err("Usage: fusion_baseline train.references.jsonl train.reports.json development.references.jsonl development.reports.json output.json".into());
+    if args.len() == 4 && args[0] == "prepare-oof" {
+        return oof::prepare(
+            &read(&args[1])?,
+            &read(&args[2])?,
+            std::path::Path::new(&args[3]),
+        );
+    }
+    if args.first().is_some_and(|v| v == "merge-oof") {
+        if args.len() != 7 {
+            return Err(
+                "Usage: fusion_baseline merge-oof output.json fold0.json ... fold4.json".into(),
+            );
+        }
+        let mut combined = Observation {
+            schema_version: "kzn.recognition.source_review_observation.v1".into(),
+            reports: vec![],
+        };
+        let mut ids = BTreeSet::new();
+        for path in &args[2..] {
+            let part: Observation = serde_json::from_slice(&read(path)?)?;
+            if part.schema_version != combined.schema_version
+                || combined.reports.len() + part.reports.len() > 4096
+            {
+                return Err("invalid merged schema/size".into());
+            }
+            for report in part.reports {
+                report.validate()?;
+                if !ids.insert(report.base.segment_id.clone()) {
+                    return Err("duplicate fold report".into());
+                }
+                combined.reports.push(report);
+            }
+        }
+        std::fs::write(&args[1], serde_json::to_vec(&combined)?)?;
+        return Ok(());
+    }
+    if args.len() != 5 && !(args.len() == 7 && args[5] == "--oof-plan") {
+        return Err("Usage: fusion_baseline train.references.jsonl train.reports.json development.references.jsonl development.reports.json output.json [--oof-plan plan.json]".into());
     }
     let bytes: Vec<_> = args[..4].iter().map(|p| read(p)).collect::<Result<_>>()?;
-    let train = load(&bytes[0], &bytes[1], "train")?;
+    let plan: Option<oof::Plan> = if args.len() == 7 {
+        let p: oof::Plan = serde_json::from_slice(&read(&args[6])?)?;
+        p.validate(&bytes[0])?;
+        Some(p)
+    } else {
+        None
+    };
+    let train = if let Some(p) = &plan {
+        load_mode(&bytes[0], &bytes[1], "train", Some(p))?
+    } else {
+        load(&bytes[0], &bytes[1], "train")?
+    };
     // Fit all ablations before loading development labels or features.
     let models = [
         ("confidence_only", fit(&train.rows, vec![0])?),
         ("text_only", fit(&train.rows, (1..N).collect())?),
         ("integrated", fit(&train.rows, (0..N).collect())?),
     ];
-    let dev = load(&bytes[2], &bytes[3], "development")?;
+    let dev = load_mode(&bytes[2], &bytes[3], "development", plan.as_ref())?;
     disjoint(&train, &dev)?;
     let rows:Vec<_>=models.into_iter().map(|(name,model)|json!({"ablation":name,"development":evaluate(&model,&dev.rows),"model":model})).collect();
-    let out = json!({"schema_version":"kzn.fusion.development.v1","quality_accepted":false,"runtime_policy_changed":false,"method":"standardized_logistic_l2.fixed500.v1","steps":500,"learning_rate":0.05,"l2":0.01,"flag_margin_threshold":0.0,"features":FEATURES,"missingness":"train observed mean imputation plus missing indicator per feature","input_sha256":bytes.iter().map(|b|format!("{:x}",Sha256::digest(b))).collect::<Vec<_>>(),"feature_signature":train.signature,"training_count":train.rows.len(),"development_count":dev.rows.len(),"results":rows,"limitations":["uncalibrated margins, not recognition error probabilities","development only; no acceptance, calibration or low-risk decision","text statistics corpus includes train references only; no cross-fitting within train","declared/exact group audit does not establish independence of templates"]});
+    let out = json!({"schema_version":"kzn.fusion.development.v1","quality_accepted":false,"runtime_policy_changed":false,"oof_plan":plan,"method":"standardized_logistic_l2.fixed500.v1","steps":500,"learning_rate":0.05,"l2":0.01,"flag_margin_threshold":0.0,"features":FEATURES,"missingness":"train observed mean imputation plus missing indicator per feature","input_sha256":bytes.iter().map(|b|format!("{:x}",Sha256::digest(b))).collect::<Vec<_>>(),"feature_signature":train.signature,"training_count":train.rows.len(),"development_count":dev.rows.len(),"results":rows,"limitations":["uncalibrated margins, not recognition error probabilities","development only; no acceptance, calibration or low-risk decision","text statistics use train references only; OOF is applied only when oof_plan is present","declared/exact group audit does not establish independence of templates"]});
     let path = std::path::Path::new(&args[4]);
     if let Some(p) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(p)?;

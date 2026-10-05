@@ -1,0 +1,27 @@
+{
+    "schema_version":  "kzn.local_dataset.snapshot.v1",
+    "dataset_id":  "kzn-ocr-synth-1k",
+    "description":  "Previously audited train/development projections and source mapping; historical runner identity retained.",
+    "files":  [
+                  {
+                      "path":  "train.inputs.jsonl",
+                      "sha256":  "a7fc80ef9f47adc87801abf5ecd44c7a78aeb8e4ddee494f4ff46b78b221cde1"
+                  },
+                  {
+                      "path":  "train.references.jsonl",
+                      "sha256":  "c92e7c587db3f67be618c556b4d7bafb81617cab2dc9ebda0a875fb960ff8a83"
+                  },
+                  {
+                      "path":  "development.inputs.jsonl",
+                      "sha256":  "9d1c43410ee8f77c7a9b8a559c4bb760f743bc87d5cc58fb6b527091c427a946"
+                  },
+                  {
+                      "path":  "development.references.jsonl",
+                      "sha256":  "f73cf6a92fc811069eaa95e73d9af312440d0af7e94290a7f25f8735d39ede94"
+                  },
+                  {
+                      "path":  "source-mapping.json",
+                      "sha256":  "9c7d2c750282253199dbed75ebee267d6970f9ea53362b271c0fb721e69ef69c"
+                  }
+              ]
+}

@@ -38,3 +38,30 @@ trainは一致301/不一致199、developmentは一致66/不一致34。
 原因候補として統計特徴の構築時の分布差を確認した。smallの一致例における未観測語bigram率の平均はtrain301件で0、development66件で約0.726。trainの参照自身が統計資産に含まれるため、学習時には正常例の語列が既知だが、development正常例の多くは未知になる。この差は実測されたが、モデルの全誤警報を単一原因へ断定しない。
 
 次は原文/document groupを単位としたout-of-fold特徴生成、または学習器の例と独立したclean統計集合を比較する。前者は各学習例を含まない統計資産でその例の特徴を計算する。今回の出力を採用済artifactとせず、testを見ずに特徴構築を直す。データ増量・ASR実行は今回不要。runtime policyは既存のまま。
+## 学習例を除外した統計特徴（2026-10-06）
+
+`evaluate-oof-synth-1k.ps1`で5-foldの統計特徴を生成する。trainだけをdocument_id・manifestのorigin_id・非空転記完全一致の推移的な連結成分にまとめ、最小ID順に件数の少ないfoldへ割り当てる。正誤ラベルで層別せず、同一groupを分割しない。各foldの統計資産は残る4foldのclean転記だけから作り、除外したfoldの認識結果を特徴化する。developmentにはtrain全体の統計資産を使う。今回のtrain500は各100件の5fold、各統計資産400件、development用500件となった。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/evaluate-oof-synth-1k.ps1 -DatasetRoot C:/Users/Shion/Documents/Projects/kzn-dataset -Offline -UsePreparedSnapshot
+```
+
+通常はsource runnerを通して外部ファイルの固定hashとsplitを再監査する。今回は外部READMEに実画像版の案内が増え、生成runnerに縦方向の行順/空白処理が追加され、旧hashと不一致になった。データ本体・manifest・sources.lock・ATTRIBUTIONは変更なし。新しい生成コードで古いデータの来歴を上書きせず、`-UsePreparedSnapshot`で以前監査したtrain/development射影とsource mappingの固定hashを照合して再利用した。固定値は`resources/evaluation/kzn-ocr-synth-1k-oof.snapshot.json`、原データ4ファイルのhashは既存lockを使う。旧runnerのhashもmapping内に保持する。詳細データ・snapshot本体はtarget内のみ。新しい実画像データはこの評価へ追加していない。
+
+`fusion_baseline prepare-oof`はtrain参照とmanifestからplan、clean corpus、goldを含まない認識入力を作る。`merge-oof`は5foldのreportを検証し、重複拒否・f64往復精度を保って統合する。学習CLIに`--oof-plan plan.json`を付けると、参照hash・group割当・補集合・corpus hashを再計算し、各train reportが自分を除外したfold資産を使ったこと、developmentが全train資産を使ったことをcorpus ID/hash/件数で照合する。この検証後だけfold間の資産ID差を許容し、解析器/source rule等の同一性は維持する。planのorigin宣言は入力manifestに依存し、standalone CLIだけで外部manifestの真正性を保証するものではない。上記runnerは固定manifest hashを別途検証する。
+
+OOFに変更するのは統計特徴の構築のみ。モデル・標準化方式・学習回数・L2・margin境界は前回と同じ。各train例は自分を除外した統計特徴を持つが、logistic係数自体は全train500件で学習する。trainのOOF予測性能を独立test性能として報告するものではない。400件と500件の統計規模差、テンプレート間の依存、合成画像という限界は残る。
+### OOF結果
+
+| 特徴 | 辞書 | flag一致 / 不一致 | precision | recall |
+| --- | --- | --- | --- | --- |
+| confidence_only | 全3辞書 | 1 / 26 | 26/27 ≈ 96.3% | 26/34 ≈ 76.5% |
+| text_only | small | 6 / 25 | 25/31 ≈ 80.6% | 25/34 ≈ 73.5% |
+| text_only | core/full | 6 / 26 | 26/32 ≈ 81.3% | 26/34 ≈ 76.5% |
+| integrated | 全3辞書 | 2 / 28 | 28/30 ≈ 93.3% | 28/34 ≈ 82.4% |
+
+正常例66件の統合flagは前回64件から2件へ減った。smallの正常例の未観測語bigram率平均は、OOF train301件で0.73845、development66件で0.72621（前回trainは0）。特徴構築時の分布差は縮まった。confidence_onlyとの比較ではsmallの統合flagに不一致2件・一致2件が新たに加わり、一致1件が外れた。不一致の取りこぼしも6件残る。総件数だけから一方の集合が他方を含むとは扱わない。
+
+developmentを用いた設計修正後の結果であり、**本番採用・品質受入は引き続き未実施**。正しく読めた確率やlow_riskへ変換しない。SLM呼出0、runtime policy変更なし。calibration/testの特徴生成・推論・閾値調整なし。次はこの候補を固定して欠測/空入力等の適用範囲とCPU費用を整理し、独立評価前の受入条件を定義する。追加Nが必要になればユーザーへ依頼し、自動収集・ASR実行は行わない。
+
+検証: fusion7テスト（OOF追加3）、全example all-features/offline check、3辞書matrix、small再実行byte/hash一致、PowerShell構文とformat/diff。詳細出力は`target/kzn-ocr-synth-1k/oof/`、集約は`summary.json`。

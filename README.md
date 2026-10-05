@@ -117,3 +117,5 @@ source統合レポートの品質集計を追加（2026-10-06）。統合後summ
 OCR 1kの明示source mappingとtrain下位10%境界によるdevelopment比較を追加（2026-10-06）。confidenceのreview9件は既存統計review内で、OR追加検出は0。[結果](docs/ocr-synth-1k.md)。
 
 軽量学習fusionの3辞書development比較を追加（2026-10-06）。テキスト統合は誤警報が多く本番採用せず、統計特徴のtrain/development分布差を確認。[結果](docs/recognition-fusion-baseline.md)。
+
+OOF統計特徴で融合を再比較（2026-10-06）。small/core/fullとも不一致28/34件、正常例へのflag2/66件。development観察であり本番未採用・test未使用。[手順と限界](docs/recognition-fusion-baseline.md)。
