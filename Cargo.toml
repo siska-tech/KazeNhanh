@@ -15,6 +15,7 @@ legacy = ["dep:kaze_nhanh_legacy", "dep:tokenizers", "dep:git2"]
 mock_inference = ["legacy", "kaze_nhanh_legacy/mock_inference"]
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 kaze_nhanh_qwen = { path = "crates/qwen", version = "0.2.0", optional = true }
 kaze_nhanh_core = { path = "crates/core", version = "0.2.0" }
@@ -26,7 +27,6 @@ git2 = { version = "0.18", features = ["vendored-libgit2"], optional = true }
 
 [dev-dependencies]
 sha2 = "0.10"
-serde = { version = "1", features = ["derive"] }
 tempfile = "3"
 criterion = { version = "0.5", features = ["html_reports"] }
 

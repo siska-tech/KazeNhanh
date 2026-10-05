@@ -670,3 +670,123 @@ fn malformed_rules_and_inputs_are_errors_not_negative_assessments() {
         .assess("漢字", RecognitionSource::Asr, Some("fixture"), &invalid)
         .is_err());
 }
+
+#[test]
+fn source_fusion_adds_review_without_changing_core_report_for_ocr_and_asr() {
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        let evidence = review_evidence(source);
+        let rule = review_rule(&evidence);
+        let mut input = RecognitionInput::new("漢字", source, "d", "s");
+        input.domain = Some("fixture");
+        input.recognizer_evidence = Some(&evidence);
+        let base = engine().evaluate_recognition(input.clone()).unwrap();
+        assert_eq!(base.decision, RecognitionDecision::Undetermined);
+        let combined = rule.evaluate(&engine(), input).unwrap();
+        assert_eq!(combined.base, base);
+        assert_eq!(combined.decision, RecognitionDecision::Review);
+        assert!(combined.confidence.as_ref().unwrap().review_requested);
+        assert_eq!(combined.base.metrics.slm_calls, 0);
+        assert_eq!(combined.base.recognition_risk.value, None);
+        combined.validate().unwrap();
+    }
+}
+#[test]
+fn source_fusion_never_cancels_base_review_or_accepts_high_missing_confidence() {
+    let mut evidence = review_evidence(RecognitionSource::Ocr);
+    evidence.confidences[0].score.as_mut().unwrap().value = 0.99;
+    let rule = review_rule(&evidence);
+    let mut input = RecognitionInput::new("漢字", RecognitionSource::Ocr, "d", "s");
+    input.domain = Some("fixture");
+    input.recognizer_evidence = Some(&evidence);
+    assert_eq!(
+        rule.evaluate(&engine(), input).unwrap().decision,
+        RecognitionDecision::Undetermined
+    );
+    evidence.candidates = candidates("漢字", "漢子");
+    evidence.candidates.align("漢字").unwrap();
+    let mut input = RecognitionInput::new("漢字", RecognitionSource::Ocr, "d", "s");
+    input.domain = Some("fixture");
+    input.recognizer_evidence = Some(&evidence);
+    let result = rule
+        .evaluate(
+            &engine().with_candidate_disagreement_review(),
+            input.clone(),
+        )
+        .unwrap();
+    assert_eq!(result.decision, RecognitionDecision::Review);
+    assert_eq!(result.base.decision, RecognitionDecision::Review);
+    assert!(!result.confidence.unwrap().review_requested);
+    input.domain = None;
+    let unavailable = rule
+        .evaluate(&engine().with_candidate_disagreement_review(), input)
+        .unwrap();
+    assert_eq!(unavailable.decision, RecognitionDecision::Review);
+    assert!(unavailable
+        .reasons
+        .iter()
+        .any(|r| r == "source_confidence_unavailable"));
+    let absent = rule
+        .evaluate(
+            &engine(),
+            RecognitionInput::new("漢字", RecognitionSource::Ocr, "d", "s"),
+        )
+        .unwrap();
+    assert_eq!(absent.decision, RecognitionDecision::Undetermined);
+    assert!(absent.confidence.is_none());
+    absent.validate().unwrap();
+}
+#[test]
+fn source_fusion_json_roundtrip_and_tamper_detection() {
+    let evidence = review_evidence(RecognitionSource::Asr);
+    let rule = review_rule(&evidence);
+    let mut input = RecognitionInput::new("漢字", RecognitionSource::Asr, "d", "s");
+    input.domain = Some("fixture");
+    input.recognizer_evidence = Some(&evidence);
+    let report = rule.evaluate(&engine(), input).unwrap();
+    let json = serde_json::to_string(&report).unwrap();
+    let decoded: SourceReviewReport = serde_json::from_str(&json).unwrap();
+    assert_eq!(decoded, report);
+    decoded.validate().unwrap();
+    for i in 0..6 {
+        let mut bad = report.clone();
+        match i {
+            0 => bad.decision = RecognitionDecision::LowRisk,
+            1 => bad.reasons.clear(),
+            2 => bad.confidence.as_mut().unwrap().observations[0].review_requested = Some(false),
+            3 => bad.rule.threshold.value = 0.1,
+            4 => bad.schema_version = "unknown".into(),
+            _ => bad.confidence = None,
+        }
+        assert!(bad.validate().is_err());
+    }
+    let mut bad: serde_json::Value = serde_json::from_str(&json).unwrap();
+    bad["extra"] = serde_json::json!(true);
+    assert!(serde_json::from_value::<SourceReviewReport>(bad).is_err());
+}
+#[test]
+fn source_fusion_validates_configuration_before_analysis_and_runs_analysis_once() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    struct Count(Arc<AtomicUsize>);
+    impl MorphAnalyzer for Count {
+        fn analyze(&self, _: &str) -> Result<MorphAnalysis, EvaluationError> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(MorphAnalysis {
+                morphemes: vec![],
+                provenance: vec![],
+            })
+        }
+    }
+    let calls = Arc::new(AtomicUsize::new(0));
+    let e = RecognitionEngine::new(Arc::new(Count(calls.clone())), RecognitionConfig::default())
+        .unwrap();
+    let evidence = review_evidence(RecognitionSource::Ocr);
+    let rule = review_rule(&evidence);
+    let input = RecognitionInput::new("漢字", RecognitionSource::Ocr, "d", "s");
+    let mut invalid = rule.clone();
+    invalid.threshold.direction = ConfidenceDirection::Unknown;
+    assert!(invalid.evaluate(&e, input.clone()).is_err());
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    let result = rule.evaluate(&e, input).unwrap();
+    result.validate().unwrap();
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}

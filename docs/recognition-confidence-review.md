@@ -20,8 +20,32 @@ HigherIsBetterならvalue < threshold、LowerIsBetterならvalue > thresholdでr
 
 空confidence集合・全体binding不一致にはunavailable_reasonを返す。falseという全体集約だけで受理せず、各観測の適用状態を参照する。本APIはRecognitionReportを変更せず、既存primary/candidate/sparse reviewの取消も行わない。risk確率・low_riskは生成しない。
 
-初期実装はsource evidence解釈の部品まで。RecognitionEngineのpolicyへの接続、融合結果の出力契約、代表データによる閾値採用は未実装。テストの0.5は人工契約専用で、OCR/ASRの推奨閾値ではない。高confidenceによる異常取消は今後も行わない。
+2026-10-05の初期実装はsource evidence解釈の部品まで。その後facadeでのengine接続と融合レポートを追加した（次節）。代表データによる閾値採用は未実装。テストの0.5は人工契約専用で、OCR/ASRの推奨閾値ではない。高confidenceによる異常取消は今後も行わない。
 
 提供PP-OCRv6 15件のconfidenceは方向・集約・targetが未定義で、本ruleの適用条件を満たさない。版・意味を推測で補完しない。新規データ収集やASR実行は行わず、必要なrecognizer定義・評価データはユーザーに別途依頼する。
 
 認識core/schemaは変更なし。新Rust APIのみ追加し、既存adapter・旧reportはそのまま使用可能。small/core/fullの統計・POS観測にも変更なし。source契約テストはモデル/辞書なしでOCR/ASR、両方向、境界値、raw保持、欠測、版/粒度/集約/尺度/domain不一致、不正設定/入力拒否を検証する。
+## Engine接続・統合レポート（2026-10-06）
+
+```rust,ignore
+let combined = rule.evaluate(&engine, input)?;
+// 既に評価済みなら再解析せずに統合できる:
+let combined = rule.combine(base_report)?;
+combined.validate()?;
+let json = serde_json::to_string(&combined)?;
+```
+
+`SourceReviewReport`は別namespace `kzn.recognition.source_review.v1`。`base`に無変更のRecognitionReport、`rule`に明示設定のsnapshot、`confidence`にraw保持のassessmentを格納する。`decision`が統合後の判断、`policy_id=kzn.recognition.source_review_or.v1`。base.decisionは従来のcore判断なので、統合判断が必要な呼出側は最上位decisionを参照する。
+
+- baseがReview、またはconfidenceが確認要求ならReview（OR）。一次・候補・統計のどのreviewも取り消さない。
+- 両方ともreview要求なしならUndetermined。高confidenceを正常・低リスクへ変換しない。
+- source evidence未提供はconfidence=None、source_confidence_unavailableを理由に残す。部分欠測やbinding不一致も同理由と各観測の詳細reasonを保持する。reviewと適用不能の理由は共存できる。
+- 推定済riskやLowRiskのbaseはこの未校正policyの範囲外として拒否する。確率融合はしない。
+
+`evaluate`はruleを検証してからengineを1回呼び、`combine`は再解析しない。modelを追加せず、engine側の実行設定や元metricsは保持する。base.metricsの時間はcore処理の計測値であり、adapter統合時間を含む全体性能値とは扱わない。
+
+JSONにはrule/assessmentの全フィールドを保存。unknown field拒否、`validate`はbase検証後に保存ルールからassessment・OR判断・理由を再計算して照合する。設定や原本の真正性・閾値の有効性を証明する検証ではない。出力改ざんを構造的に拒否するが、運用時のasset信頼管理は別責務。
+
+旧core API/schemaは変更しない。新しいwrapperを既存recognition_qualityの観察JSONとして直接渡すことはできない。同CLIの既存品質結果はbase/core判断の結果である。source統合の品質評価runner・実際のsource定義に基づくrule採用は今後の作業。
+
+人工契約でOCR/ASRの追加review、high-confidence+候補差のreview保持、source/domain欠落時の保留・理由、JSON往復/改ざん、設定不正を解析前に拒否、解析1回を確認。今回の追加で既存OCR 1kに閾値を適用したとは主張しない。

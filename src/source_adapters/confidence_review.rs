@@ -1,7 +1,9 @@
 //! Explicit source-bound review requests. No default thresholds or correctness claims.
 use super::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConfidenceReviewRule {
     pub id: String,
     pub recognizer: RecognizerIdentity,
@@ -12,7 +14,8 @@ pub struct ConfidenceReviewRule {
     /// Value is the strict review boundary; all other fields describe the expected scale.
     pub threshold: RawScore,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConfidenceReviewObservation {
     /// Unmodified input, including span, score and shared dependencies.
     pub observation: ConfidenceObservation,
@@ -20,7 +23,8 @@ pub struct ConfidenceReviewObservation {
     pub review_requested: Option<bool>,
     pub reason: String,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConfidenceReviewAssessment {
     pub rule_id: String,
     pub review_requested: bool,
@@ -140,5 +144,91 @@ impl ConfidenceReviewRule {
                 .map(str::to_owned),
             observations: rows,
         })
+    }
+}
+
+pub const SOURCE_REVIEW_SCHEMA: &str = "kzn.recognition.source_review.v1";
+pub const SOURCE_REVIEW_POLICY: &str = "kzn.recognition.source_review_or.v1";
+
+/// A facade report retaining the unchanged core report and an explicit source rule snapshot.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceReviewReport {
+    pub schema_version: String,
+    pub policy_id: String,
+    pub base: RecognitionReport,
+    pub rule: ConfidenceReviewRule,
+    /// None only when base.recognizer_evidence is absent.
+    pub confidence: Option<ConfidenceReviewAssessment>,
+    pub decision: RecognitionDecision,
+    pub reasons: Vec<String>,
+}
+impl ConfidenceReviewRule {
+    /// Evaluate once through the supplied core engine, then apply source review without a model.
+    pub fn evaluate(
+        &self,
+        engine: &RecognitionEngine,
+        input: RecognitionInput<'_>,
+    ) -> Result<SourceReviewReport, EvaluationError> {
+        self.validate()?;
+        self.combine(engine.evaluate_recognition(input)?)
+    }
+    /// Combine a validated report without re-running morphology or changing its evidence.
+    pub fn combine(&self, base: RecognitionReport) -> Result<SourceReviewReport, EvaluationError> {
+        self.validate()?;
+        base.validate()?;
+        // This experimental policy has no accepted low-risk/calibrated operating region.
+        if base.decision == RecognitionDecision::LowRisk || base.recognition_risk.value.is_some() {
+            return Err(EvaluationError::Contract(
+                "source review supports only unestimated review/undetermined reports".into(),
+            ));
+        }
+        let confidence = base
+            .recognizer_evidence
+            .as_ref()
+            .map(|e| self.assess(&base.original_text, base.source, base.domain.as_deref(), e))
+            .transpose()?;
+        let mut reasons = Vec::new();
+        let base_review = base.decision == RecognitionDecision::Review;
+        let source_review = confidence.as_ref().is_some_and(|c| c.review_requested);
+        if base_review {
+            reasons.push("base_review_required".into());
+        }
+        if source_review {
+            reasons.push("source_confidence_review_required".into());
+        }
+        if confidence.as_ref().is_none_or(|c| {
+            c.unavailable_reason.is_some()
+                || c.observations.iter().any(|o| o.review_requested.is_none())
+        }) {
+            reasons.push("source_confidence_unavailable".into());
+        }
+        let decision = if base_review || source_review {
+            RecognitionDecision::Review
+        } else {
+            reasons.push("low_risk_not_established".into());
+            RecognitionDecision::Undetermined
+        };
+        Ok(SourceReviewReport {
+            schema_version: SOURCE_REVIEW_SCHEMA.into(),
+            policy_id: SOURCE_REVIEW_POLICY.into(),
+            base,
+            rule: self.clone(),
+            confidence,
+            decision,
+            reasons,
+        })
+    }
+}
+impl SourceReviewReport {
+    /// Recompute the source assessment and OR decision. Does not authenticate artifact identities.
+    pub fn validate(&self) -> Result<(), EvaluationError> {
+        let expected = self.rule.combine(self.base.clone())?;
+        if *self != expected {
+            return Err(EvaluationError::Contract(
+                "source review report differs from base evidence/rule/decision".into(),
+            ));
+        }
+        Ok(())
     }
 }

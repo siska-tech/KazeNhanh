@@ -348,3 +348,13 @@ workspace全体all-features/offlineテスト、最小lib check、format/diff・�
 比較結果: 3辞書とも既定保留100、sparse review24（不一致17/34、一致7/66）。POS ANDは拾える不一致も減少し、条件変更なし。6出力の全ID/原文/raw/null/SLM0/risk未算出を検証。core53件とrunner null契約成功。
 
 workspace全体all-features/offlineテスト、format/diff、文書リンク、PowerShell構文も成功。前回f63ed9cのremote CI成功。
+
+## Source review統合（2026-10-06）
+- [x] rule evaluate/combine、core report保持、最終OR decision、欠測理由
+- [x] 別JSON namespace、設定snapshot、assessment/判断再計算検証
+- [x] OCR/ASR・高confidence取消防止・欠落・改ざん・解析1回の追加4テスト
+- [ ] source定義の採用、統合品質runner、閾値と品質受入
+
+[仕様](../docs/recognition-confidence-review.md)。source契約20テスト成功。status=progressを維持、既存datasetの新規推論・閾値調整なし。
+
+最小lib check、workspace全体all-features/offlineテスト、format/diff・文書リンク検証成功。前回c32c90fのremote CI成功。

@@ -262,3 +262,7 @@ kzn-ocr-synth-1kを固定hashで登録。合成画像の実OCR結果であり、
 ## 24. OCR 1k development比較（2026-10-06）
 
 train500件の参照のみから3辞書のPOS付き統計assetを作成し、development100件で既定/sparse policyと特徴条件を比較。null confidenceを欠測として保持。JSON小数往復の厳密検証失敗を再現しfloat_roundtripで修正。条件調整・calibration/test推論・再認識は行わない。[手順と結果](ocr-synth-1k.md)。R2品質受入は未完了。
+
+## 25. Source reviewのengine接続（2026-10-06）
+
+facadeでConfidenceReviewRule.evaluate/combineを追加。base reportを保持した別namespaceに設定・assessment・最終OR判断を保存し、JSON検証で再計算。既存の一次/候補/統計reviewを取り消さず、未提供/不適用は保留理由を残す。risk推定とlow_risk受入はしない。[契約](recognition-confidence-review.md)。実データsource定義に基づくruleと統合品質runnerは未実装。
