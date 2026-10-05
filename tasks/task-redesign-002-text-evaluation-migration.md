@@ -329,3 +329,10 @@ workspace全体（all-features/offline）の単体・統合・doc testsも全件
 [仕様](../docs/recognition-confidence-review.md)。source契約16テスト成功。推奨閾値なし、PP-OCR15件に未定義の意味を補完しない。status=progressを維持。
 
 workspace全体all-features/offlineテスト、最小lib check、format/diff・文書リンク検証成功。前回3f2846eのremote CI成功。
+
+## ユーザー提供OCR 1k登録（2026-10-06）
+- [x] 5ファイルhash固定、既存split監査、行/manifest split照合
+- [x] 全1,000件の推論allowlist/参照分離・原文/null保持・再現hash確認
+- [ ] runnerのnull confidence対応、train限定統計asset、small/core/full development比較
+
+[仕様](../docs/ocr-synth-1k.md)。status=progress。test条件検討・推論は未実施、再認識不要。

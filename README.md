@@ -105,3 +105,5 @@ P2 includes explainable primary screening and profiles. Semantic consistency rem
 POS・文字種のoffline条件比較を追加（2026-10-05）。単純条件の本番採用は見送り、既存判定を維持。[比較結果](docs/recognition-feature-ablation.md)。
 
 source固有confidenceの明示ruleをadapterへ追加（2026-10-05）。尺度・認識器等が一致する観測だけを比較し、適用不能を保持。[契約](docs/recognition-confidence-review.md)。engine統合・推奨閾値は未実装。
+
+ユーザー提供OCR合成画像データ1,000件を登録（2026-10-06）。固定hash・split監査・goldを分離したローカル取り込みを追加。[利用方針](docs/ocr-synth-1k.md)。

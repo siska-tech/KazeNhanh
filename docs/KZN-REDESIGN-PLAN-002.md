@@ -254,3 +254,7 @@ OOV＋未観測文字bigram＋未観測語bigramのsegment共起を明示opt-in�
 ## 22. R2 source confidence契約（2026-10-05）
 
 adapterに明示ruleによるconfidence比較を追加。認識器/版/profile/domain/粒度/集約/尺度の一致を要求し、欠測・不一致は適用不能。閾値非該当をlow_riskへ変換しない。現PP-OCRの未定義尺度には適用しない。engine policy接続・融合と代表データでの閾値受入は未実装。[API](recognition-confidence-review.md)。R2はprogress。
+
+## 23. ユーザー提供1,000件の登録（2026-10-06）
+
+kzn-ocr-synth-1kを固定hashで登録。合成画像の実OCR結果であり、実撮影/ASR品質とは区別する。train500/calibration200/test200/development100の監査と原文保持・gold分離を確認。null confidence78件を保持。今回は取り込みまで、推論・閾値探索なし。[評価方針](ocr-synth-1k.md)。

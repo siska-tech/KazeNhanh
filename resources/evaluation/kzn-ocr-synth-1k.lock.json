@@ -1,0 +1,28 @@
+{
+    "schema_version":  "kzn.local_dataset.lock.v1",
+    "dataset_id":  "kzn-ocr-synth-1k",
+    "data_kind":  "synthetic",
+    "revision":  "1",
+    "files":  [
+                  {
+                      "path":  "dataset/kzn-ocr-synth-1k.jsonl",
+                      "sha256":  "2777657072f89f552a7024d55efa21d0eef5fc938e109eeb0acae4398eb7ec10"
+                  },
+                  {
+                      "path":  "dataset/kzn-ocr-synth-1k.manifest.json",
+                      "sha256":  "f0fc889f27edba425867baaedcc31000c009956f71dfc90709de114d0b405dd6"
+                  },
+                  {
+                      "path":  "README.md",
+                      "sha256":  "dd1c5beda388c570ce83b0e412455e2e94aab61aac92681cc43b490512495751"
+                  },
+                  {
+                      "path":  "ATTRIBUTION.md",
+                      "sha256":  "f94b3cd2f0117fb62b08a054ca4a411cb10148ff0194bf37716ba7adfb836050"
+                  },
+                  {
+                      "path":  "dataset/sources.lock.json",
+                      "sha256":  "dcfa374dd309b02e47f3484aff6af317bec46decdd5681d387572e7db85644dd"
+                  }
+              ]
+}
