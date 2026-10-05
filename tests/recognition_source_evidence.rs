@@ -521,3 +521,152 @@ fn candidate_review_is_bounded_and_keeps_independent_primary_findings() {
         .contains(&"primary_findings_require_review".into()));
     assert_eq!(report.metrics.slm_calls, 0);
 }
+
+fn review_rule(evidence: &RecognizerEvidence) -> ConfidenceReviewRule {
+    ConfidenceReviewRule {
+        id: "synthetic.rule.v1".into(),
+        recognizer: evidence.recognizer.clone(),
+        profile: evidence.profile.clone(),
+        domain: "fixture".into(),
+        granularity: evidence.confidences[0].granularity,
+        aggregation: "synthetic.mean.v1".into(),
+        threshold: RawScore {
+            value: 0.5,
+            meaning: ConfidenceMeaning::EngineScore,
+            direction: ConfidenceDirection::HigherIsBetter,
+            range: Some([0.0, 1.0]),
+            calibration_id: None,
+            target: Some("synthetic.segment.score".into()),
+        },
+    }
+}
+fn review_evidence(source: RecognitionSource) -> RecognizerEvidence {
+    RecognizerEvidence {
+        schema_version: RECOGNIZER_EVIDENCE_SCHEMA.into(),
+        source,
+        recognizer: RecognizerIdentity {
+            engine: "fixture".into(),
+            model: Some("model".into()),
+            version: Some("v1".into()),
+            decoder: Some("decoder.v1".into()),
+        },
+        profile: RecognitionSourceProfile {
+            id: "fixture.profile.v1".into(),
+            source,
+            transcription_policy_id: Some("raw.v1".into()),
+            required_signals: vec![],
+        },
+        confidences: vec![ConfidenceObservation {
+            id: "line".into(),
+            span: ByteSpan::whole("漢字"),
+            granularity: ConfidenceGranularity::Segment,
+            status: RecognitionEvidenceStatus::Observed,
+            score: Some(RawScore {
+                value: 0.2,
+                meaning: ConfidenceMeaning::EngineScore,
+                direction: ConfidenceDirection::HigherIsBetter,
+                range: Some([0.0, 1.0]),
+                calibration_id: None,
+                target: Some("synthetic.segment.score".into()),
+            }),
+            aggregation: Some("synthetic.mean.v1".into()),
+            reason: None,
+            dependencies: vec!["decoder.v1".into()],
+        }],
+        candidates: CandidateEvidence::missing(),
+        anchors: vec![],
+    }
+}
+#[test]
+fn bound_confidence_rules_preserve_raw_values_and_strict_boundaries() {
+    for source in [RecognitionSource::Ocr, RecognitionSource::Asr] {
+        for direction in [
+            ConfidenceDirection::HigherIsBetter,
+            ConfidenceDirection::LowerIsBetter,
+        ] {
+            let mut evidence = review_evidence(source);
+            evidence.confidences[0].score.as_mut().unwrap().direction = direction;
+            let mut rule = review_rule(&evidence);
+            rule.threshold.direction = direction;
+            for value in [0.2, 0.5, 0.8] {
+                evidence.confidences[0].score.as_mut().unwrap().value = value;
+                let result = rule
+                    .assess("漢字", source, Some("fixture"), &evidence)
+                    .unwrap();
+                let expected = if direction == ConfidenceDirection::HigherIsBetter {
+                    value < 0.5
+                } else {
+                    value > 0.5
+                };
+                assert_eq!(result.review_requested, expected);
+                assert_eq!(result.observations[0].review_requested, Some(expected));
+                assert_eq!(result.observations[0].observation, evidence.confidences[0]);
+            }
+        }
+    }
+}
+#[test]
+fn unknown_missing_and_mismatched_confidence_stay_unavailable() {
+    let base = review_evidence(RecognitionSource::Ocr);
+    let rule = review_rule(&base);
+    for change in 0..9 {
+        let mut e = base.clone();
+        match change {
+            0 => e.recognizer.version = Some("v2".into()),
+            1 => e.profile.transcription_policy_id = Some("normalized.v1".into()),
+            2 => e.confidences[0].granularity = ConfidenceGranularity::Line,
+            3 => e.confidences[0].aggregation = None,
+            4 => e.confidences[0].score.as_mut().unwrap().direction = ConfidenceDirection::Unknown,
+            5 => e.confidences[0].score.as_mut().unwrap().target = None,
+            6 => e.confidences[0].score.as_mut().unwrap().range = None,
+            7 => {
+                e.confidences[0].status = RecognitionEvidenceStatus::Missing;
+                e.confidences[0].score = None;
+                e.confidences[0].reason = Some("missing".into());
+            }
+            _ => e.confidences[0].span = ByteSpan::new("漢字", 0, 0).unwrap(),
+        }
+        let r = rule
+            .assess("漢字", RecognitionSource::Ocr, Some("fixture"), &e)
+            .unwrap();
+        assert!(!r.review_requested);
+        assert_eq!(r.observations[0].review_requested, None);
+    }
+    assert!(rule
+        .assess("漢字", RecognitionSource::Ocr, None, &base)
+        .unwrap()
+        .unavailable_reason
+        .is_some());
+    let mut empty = base.clone();
+    empty.confidences.clear();
+    assert_eq!(
+        rule.assess("漢字", RecognitionSource::Ocr, Some("fixture"), &empty)
+            .unwrap()
+            .unavailable_reason
+            .as_deref(),
+        Some("confidence_not_provided")
+    );
+}
+#[test]
+fn malformed_rules_and_inputs_are_errors_not_negative_assessments() {
+    let base = review_evidence(RecognitionSource::Asr);
+    let rule = review_rule(&base);
+    for change in 0..5 {
+        let mut r = rule.clone();
+        match change {
+            0 => r.threshold.value = f64::NAN,
+            1 => r.recognizer.model = None,
+            2 => r.threshold.direction = ConfidenceDirection::Unknown,
+            3 => r.threshold.meaning = ConfidenceMeaning::Unknown,
+            _ => r.aggregation.clear(),
+        }
+        assert!(r
+            .assess("漢字", RecognitionSource::Asr, Some("fixture"), &base)
+            .is_err());
+    }
+    let mut invalid = base;
+    invalid.confidences[0].score.as_mut().unwrap().value = 2.0;
+    assert!(rule
+        .assess("漢字", RecognitionSource::Asr, Some("fixture"), &invalid)
+        .is_err());
+}

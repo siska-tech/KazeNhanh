@@ -65,3 +65,5 @@ P1完了: 独立coreの契約試験、新Sudachi・legacyの分離、0.2 feature
 R2文字種観測（2026-10-05）: 固定範囲のscalar件数・隣接遷移・有界spanを実装。判定条件/source policy/fusionと品質受入は残作業。[仕様](../docs/recognition-string-features.md)。
 
 R2条件比較（2026-10-05）: POS/文字種と既存統計条件の5比較・欠測別集計を実装。3辞書の観察では単純条件の採用根拠なし。source policy/fusion・品質受入は継続。[詳細](../docs/recognition-feature-ablation.md)。
+
+R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値比較・適用不能を実装。core policy接続/fusionと閾値受入は未完了。[仕様](../docs/recognition-confidence-review.md)。

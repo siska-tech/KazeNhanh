@@ -319,3 +319,13 @@ workspace全体（all-features/offline）の単体・統合・doc testsも全件
 [結果](../docs/recognition-feature-ablation.md)。recognition_quality全8テストと3辞書runner成功。status=progress維持、追加データ収集・ASR実行なし。
 
 全exampleのall-features/offline check、format/diff、文書リンク、PowerShell構文も成功。前回79892d0のremote CI成功。
+
+## R2 source confidence契約（2026-10-05）
+- [x] adapter明示rule・厳格binding・方向付き境界・raw保持
+- [x] 欠測/不一致を適用不能とし、不正設定/入力はError
+- [x] OCR/ASR/両方向/境界/欠測等の追加3契約テスト
+- [ ] engine policy接続・融合出力契約・代表データでの閾値受入
+
+[仕様](../docs/recognition-confidence-review.md)。source契約16テスト成功。推奨閾値なし、PP-OCR15件に未定義の意味を補完しない。status=progressを維持。
+
+workspace全体all-features/offlineテスト、最小lib check、format/diff・文書リンク検証成功。前回3f2846eのremote CI成功。
