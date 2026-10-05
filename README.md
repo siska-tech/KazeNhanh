@@ -115,3 +115,5 @@ source confidenceのengine接続・統合レポートを追加（2026-10-06）�
 source統合レポートの品質集計を追加（2026-10-06）。統合後summaryとbase_summaryを分離し、旧観察形式を維持。[契約](docs/recognition-confidence-review.md)。
 
 OCR 1kの明示source mappingとtrain下位10%境界によるdevelopment比較を追加（2026-10-06）。confidenceのreview9件は既存統計review内で、OR追加検出は0。[結果](docs/ocr-synth-1k.md)。
+
+軽量学習fusionの3辞書development比較を追加（2026-10-06）。テキスト統合は誤警報が多く本番採用せず、統計特徴のtrain/development分布差を確認。[結果](docs/recognition-fusion-baseline.md)。

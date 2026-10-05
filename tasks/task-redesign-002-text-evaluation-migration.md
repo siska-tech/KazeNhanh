@@ -378,3 +378,13 @@ workspace全体all-features/offlineテスト、format/diff、文書リンク、P
 結果: confidence不一致9/34・一致0/66、ORは既存sparseの不一致17/34・一致7/66と同じ。追加検出0、条件変更なし。status=progress。
 
 runner契約2件、全example all-features/offline check、3辞書比較、全600reportの原文/raw/欠測/review保持・SLM0/risk未算出照合、format/diff・PowerShell構文・文書リンク成功。
+
+## 軽量学習fusion比較（2026-10-06）
+- [x] train限定標準化・欠測indicator・固定logistic3特徴群・未校正margin
+- [x] source/asset同一性とsplit/ID/原文重複検査、再現性等4テスト
+- [x] 3辞書development比較。統合モデルは誤警報過多により未採用
+- [ ] out-of-fold統計特徴・融合再比較・独立品質受入
+
+[結果](../docs/recognition-fusion-baseline.md)。status=progress。confidence-only flag不一致26/34・一致1/66、統合flag不一致34/34・一致64/66。新たな閾値調整・calibration/test評価なし。
+
+検証: fusion4テスト、全example all-features/offline check、3辞書runner、small再実行のbyte/hash一致、format/diff・PowerShell構文・文書リンク成功。前回c3cc23d CI成功。

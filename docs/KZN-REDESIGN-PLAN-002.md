@@ -274,3 +274,7 @@ recognition_qualityにsource専用envelopeを追加。wrapper検証後に最上�
 ## 27. OCR source定義と統合比較（2026-10-06）
 
 固定engine commitのCTCと生成runnerからscore集約を確認し、明示source mappingを追加。train観測confidence461件の下位10%境界をラベルなしで固定（欠測39）。developmentではconfidenceが不一致9/34・一致0/66をreview、既存sparse ORへの追加検出0。3辞書同結果。高confidence取消・低リスク変換なし。calibration/test推論・閾値変更なし。[仕様・結果](ocr-synth-1k.md)。
+
+## 28. 軽量学習fusion比較（2026-10-06）
+
+train500で標準化/固定logisticモデルを学習しdevelopment100で3特徴群を比較。confidenceのみはflag不一致26/34・一致1/66、text/integratedは正常例にもほぼ全件flagとなり未採用。smallの一致例の未観測語bigram率がtrain0/dev約0.726とずれており、自己参照を除いたout-of-fold特徴生成が次の課題。test未使用、runtime変更なし。[契約と結果](recognition-fusion-baseline.md)。

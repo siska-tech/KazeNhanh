@@ -37,6 +37,7 @@ try {
     & (Join-Path $PSScriptRoot 'verify-statistics.ps1') -Offline:$Offline
     Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--example', 'candidate_baseline') + $networkArgs + @('--',
         'resources/sudachi/system.dic', 'evaluation/candidate-review-contract.jsonl', 'target/candidate-review-contract.json'))
+    Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--example', 'fusion_baseline') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--example', 'recognition_quality') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('test', '--locked', '--no-default-features', '--example', 'validate_recognition_dataset') + $networkArgs)
     Invoke-KazeCargo -CargoArguments (@('run', '--locked', '--no-default-features', '--example', 'validate_recognition_dataset') + $networkArgs + @('--',

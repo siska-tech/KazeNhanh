@@ -77,3 +77,5 @@ R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値�
 2026-10-06: source統合reportのoffline品質集計を実装。最終/base判断を分離、旧形式互換、rule ID衝突拒否。実データsource定義と閾値採用は残作業。
 
 2026-10-06: 生成コード/hashに基づくOCR source定義とtrainラベル非使用の下位10%比較を完了。3辞書ともconfidenceは不一致9件・一致0件、sparse ORの追加検出0。校正・test受入は未実施。
+
+2026-10-06: confidence/text/integratedの固定logistic比較を実装。train限定標準化・学習、development評価、重複/identity検査を追加。統合は誤警報64/66で未採用。次はout-of-fold統計特徴の検討。[結果](../docs/recognition-fusion-baseline.md)。
