@@ -101,3 +101,5 @@ P2 includes explainable primary screening and profiles. Semantic consistency rem
 2026-10-05: [R2 POS bigram統計](docs/recognition-pos-statistics.md)を追加。全品詞vectorの隣接頻度・未観測率と欠測を分離し、v2統計assetを明示生成。旧v1資産と既定の判定は維持。
 
 文字種・遷移の原文観測を追加（2026-10-05）。判定には未使用、旧レポート読み込みを維持。[仕様](docs/recognition-string-features.md)。
+
+POS・文字種のoffline条件比較を追加（2026-10-05）。単純条件の本番採用は見送り、既存判定を維持。[比較結果](docs/recognition-feature-ablation.md)。

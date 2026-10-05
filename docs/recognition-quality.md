@@ -41,3 +41,7 @@ decisionごとに「確認済み一致・確認済み不一致・未確認」の
 
 独立した実OCR/ASR集合、文書/話者単位のsplit、代表domainでのquality/CPU受入、text/source/統合ablationと統計的な不確実性の評価はR2以降の残作業。今回の集計結果に閾値を合わせ込まない。
 データ準備時は[split監査](recognition-datasets.md)でgroup重複・未確認test・入力hashを検証する。監査成功は代表品質やラベル真正性の保証ではない。
+
+## 特徴条件比較（2026-10-05）
+
+CLI末尾の--feature-ablationでPOS/文字種等の5条件をoffline比較する。元reportと通常summaryは変更せず、欠測/未確認を別集計。[仕様と3辞書の結果](recognition-feature-ablation.md)。

@@ -5,6 +5,9 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
+#[path = "recognition_quality/features.rs"]
+mod features;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 #[derive(Deserialize)]
 struct Reference {
@@ -85,6 +88,9 @@ fn confirmed(status: &str) -> Result<bool> {
     }
 }
 fn score(data: &str, observation: Observation) -> Result<Value> {
+    score_with_features(data, observation, false)
+}
+fn score_with_features(data: &str, observation: Observation, with_features: bool) -> Result<Value> {
     if observation.schema_version != "kzn.recognition.observation.v1" {
         return Err("unsupported observation schema".into());
     }
@@ -98,6 +104,7 @@ fn score(data: &str, observation: Observation) -> Result<Value> {
         }
     }
     let mut counts = Counts::default();
+    let mut features = features::FeatureComparison::default();
     let mut policies = BTreeMap::<String, usize>::new();
     let mut cases = 0;
     for line in data.lines().filter(|s| !s.trim().is_empty()) {
@@ -123,6 +130,12 @@ fn score(data: &str, observation: Observation) -> Result<Value> {
         let mismatch = comparison_text(&reference.text, policy)?
             != comparison_text(&reference.transcription, policy)?;
         *policies.entry(policy.to_owned()).or_default() += 1;
+        if with_features {
+            features.add(
+                &report,
+                confirmed(&reference.transcription_status)?.then_some(mismatch),
+            )?;
+        }
         counts.add(
             report.decision,
             confirmed(&reference.transcription_status)?.then_some(mismatch),
@@ -131,15 +144,17 @@ fn score(data: &str, observation: Observation) -> Result<Value> {
     if cases == 0 || !reports.is_empty() {
         return Err("empty references or unmatched reports".into());
     }
-    Ok(
-        json!({"schema_version":"kzn.recognition.quality_observation.v1",
+    let mut output = json!({"schema_version":"kzn.recognition.quality_observation.v1",
         "quality_accepted":false, "evaluation_role":"development_observation_not_held_out_test",
         "comparison_policies":policies, "summary":counts.summary(),
         "limitations":["unconfirmed references excluded from quality denominators",
         "segment mismatch only; no CER/WER, calibration or span quality",
         "undetermined is not detection and not low-risk acceptance",
-        "no independence or representativeness claimed; no confidence intervals"]}),
-    )
+        "no independence or representativeness claimed; no confidence intervals"]});
+    if with_features {
+        output["feature_ablation"] = features.summary();
+    }
+    Ok(output)
 }
 fn read_bounded(path: &std::ffi::OsStr) -> Result<Vec<u8>> {
     if std::fs::metadata(path)?.len() > 64 * 1024 * 1024 {
@@ -149,17 +164,25 @@ fn read_bounded(path: &std::ffi::OsStr) -> Result<Vec<u8>> {
 }
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    if args.len() != 3 {
+    if args.len() != 3 && !(args.len() == 4 && args[3] == "--feature-ablation") {
         return Err(
-            "Usage: recognition_quality references.jsonl observations.json summary.json".into(),
+            "Usage: recognition_quality references.jsonl observations.json summary.json [--feature-ablation]".into(),
         );
     }
     let data = read_bounded(&args[0])?;
     let reports = read_bounded(&args[1])?;
-    let mut output = score(
-        std::str::from_utf8(&data)?,
-        serde_json::from_slice(&reports)?,
-    )?;
+    let mut output = if args.len() == 4 {
+        score_with_features(
+            std::str::from_utf8(&data)?,
+            serde_json::from_slice(&reports)?,
+            true,
+        )?
+    } else {
+        score(
+            std::str::from_utf8(&data)?,
+            serde_json::from_slice(&reports)?,
+        )?
+    };
     output["reference_sha256"] = json!(format!("{:x}", Sha256::digest(&data)));
     output["observation_sha256"] = json!(format!("{:x}", Sha256::digest(&reports)));
     let path = std::path::Path::new(&args[2]);

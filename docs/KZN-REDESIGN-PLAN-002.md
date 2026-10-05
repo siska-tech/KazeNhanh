@@ -246,3 +246,7 @@ OOV＋未観測文字bigram＋未観測語bigramのsegment共起を明示opt-in�
 ## 20. R2文字種観測（2026-10-05）
 
 固定範囲の文字種件数・隣接遷移span・省略数を辞書非依存で追加。原文照合による改ざん検証、旧JSON欠落互換を維持。混在そのものは異常判定に使わず、risk/decisionは維持。R2全体はprogress。[契約](recognition-string-features.md)。
+
+## 21. R2 POS/文字種の条件比較（2026-10-05）
+
+既存reportを使うoffline5条件比較を追加。欠測を非該当と分け、確認済み転記のみ品質集計。文字種遷移は15件全件、POS未観測も正常3件全件に該当し、sparseへのPOS AND追加は該当3件のまま。単純条件の本番採用は見送り。人工8文の限界を保持し、POS全体の無効性は主張しない。[仕様・実測](recognition-feature-ablation.md)。R2はprogress。

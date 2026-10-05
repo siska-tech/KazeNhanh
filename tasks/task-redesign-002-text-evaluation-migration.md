@@ -309,3 +309,13 @@ R2はprogress。人工clean assetは適用性能を保証しない。統計観�
 検証: core52件（追加4件）成功。small/core/fullの15件すべてで文字種観測が一致し、既定review0/保留15・risk=null/SLM0を維持。前回dfb7db0のremote CI成功。
 
 workspace全体（all-features/offline）の単体・統合・doc testsも全件成功。format/diff、文書リンク、PowerShell構文確認済み。
+
+## R2 POS/文字種の条件比較（2026-10-05）
+- [x] offline5条件・該当/非該当/適用不能・確認済み限定指標
+- [x] 部分POS/旧資産/短文/旧report・AND欠測・改ざん拒否・元decision保持の追加4テスト
+- [x] 既存15件をsmall/core/fullで比較。本番policy採用は見送り
+- [ ] source policy/fusion、代表統計資産、独立品質受入
+
+[結果](../docs/recognition-feature-ablation.md)。recognition_quality全8テストと3辞書runner成功。status=progress維持、追加データ収集・ASR実行なし。
+
+全exampleのall-features/offline check、format/diff、文書リンク、PowerShell構文も成功。前回79892d0のremote CI成功。
