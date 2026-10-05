@@ -23,6 +23,10 @@
                   {
                       "path":  "dataset/sources.lock.json",
                       "sha256":  "dcfa374dd309b02e47f3484aff6af317bec46decdd5681d387572e7db85644dd"
+                  },
+                  {
+                      "path":  "ocr-runner/src/main.rs",
+                      "sha256":  "6c4c4b2d08329be3c59966afda0d876a078ca76d34694c1fa2e6380ec5fc14f9"
                   }
               ]
 }

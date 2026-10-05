@@ -368,3 +368,13 @@ workspace全体all-features/offlineテスト、format/diff、文書リンク、P
 品質集計11テスト成功。status=progress、今回の変更でOCR 1kのconfidence品質を測定したとは扱わない。前回のIssue/PR同期は利用上限による自動承認レビュー失敗で未実行だったため、今回再開した。
 
 全example all-features/offline check、保存済みdevelopment100件の旧CLI出力一致、format/diff・文書リンク成功。
+
+## OCR source定義・development統合比較（2026-10-06）
+- [x] engine commit/生成runner集約確認・runner hash固定・明示mapping
+- [x] train観測scoreだけの下位10%境界とmethod/hash記録、train corpus再照合
+- [x] small/core/fullでsource単独とsparse ORを比較、source/scale不一致拒否テスト
+- [ ] 融合比較設計・独立品質受入・校正・CPU SLO
+
+結果: confidence不一致9/34・一致0/66、ORは既存sparseの不一致17/34・一致7/66と同じ。追加検出0、条件変更なし。status=progress。
+
+runner契約2件、全example all-features/offline check、3辞書比較、全600reportの原文/raw/欠測/review保持・SLM0/risk未算出照合、format/diff・PowerShell構文・文書リンク成功。

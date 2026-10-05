@@ -270,3 +270,7 @@ facadeでConfidenceReviewRule.evaluate/combineを追加。base reportを保持�
 ## 26. Source統合の品質集計（2026-10-06）
 
 recognition_qualityにsource専用envelopeを追加。wrapper検証後に最上位decisionを集計し、base_summaryを併記する。同ID異設定ruleを拒否。feature ablationはbase証拠のみと明記。旧core観察形式は維持。[契約](recognition-confidence-review.md)。実データconfidenceの採用・閾値探索は未実施。
+
+## 27. OCR source定義と統合比較（2026-10-06）
+
+固定engine commitのCTCと生成runnerからscore集約を確認し、明示source mappingを追加。train観測confidence461件の下位10%境界をラベルなしで固定（欠測39）。developmentではconfidenceが不一致9/34・一致0/66をreview、既存sparse ORへの追加検出0。3辞書同結果。高confidence取消・低リスク変換なし。calibration/test推論・閾値変更なし。[仕様・結果](ocr-synth-1k.md)。

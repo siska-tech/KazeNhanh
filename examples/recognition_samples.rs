@@ -12,6 +12,24 @@ fn confidence(sample: &serde_json::Value) -> Result<Option<f64>, &'static str> {
         None => Err("confidence field is required; use null for missing"),
     }
 }
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceMapping {
+    expected_engine: String,
+    expected_scale: String,
+    rule: ConfidenceReviewRule,
+}
+impl SourceMapping {
+    fn validate_sample(&self, sample: &serde_json::Value) -> Result<(), &'static str> {
+        if sample["engine"].as_str() != Some(self.expected_engine.as_str())
+            || sample["confidence_scale"].as_str() != Some(self.expected_scale.as_str())
+            || sample["source"].as_str() != Some("ocr")
+        {
+            return Err("source mapping engine/scale/source mismatch");
+        }
+        Ok(())
+    }
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args_os().skip(1).collect::<Vec<_>>();
     let sparse_review = args.last().is_some_and(|a| a == "--sparse-review");
@@ -25,8 +43,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
+    let source_mapping: Option<SourceMapping> =
+        if args.len() >= 2 && args[args.len() - 2] == "--source-rule" {
+            let path = args.pop().expect("source rule path");
+            args.pop();
+            if std::fs::metadata(&path)?.len() > 65536 {
+                return Err("source rule exceeds 64 KiB".into());
+            }
+            let mapping: SourceMapping = serde_json::from_slice(&std::fs::read(path)?)?;
+            mapping.rule.validate()?;
+            if mapping.rule.profile.source != RecognitionSource::Ocr {
+                return Err("OCR source rule required".into());
+            }
+            Some(mapping)
+        } else {
+            None
+        };
     if args.len() != 2 && args.len() != 5 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--dictionary path] [--sparse-review]".into());
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--source-rule mapping.json] [--dictionary path] [--sparse-review]".into());
     }
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let assets = SudachiConfig::from_paths(
@@ -63,6 +97,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read_to_string(&args[0])?;
     let mut ids = std::collections::HashSet::new();
     let mut reports = Vec::new();
+    let mut source_reports = Vec::new();
+    if let Some(mapping) = &source_mapping {
+        if statistics_domain.is_some_and(|d| d != mapping.rule.domain) {
+            return Err("source/statistics domain mismatch".into());
+        }
+    }
     for line in data.lines().filter(|line| !line.trim().is_empty()) {
         if reports.len() >= 4096 {
             return Err("dataset exceeds 4096 segments".into());
@@ -72,6 +112,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let id = sample["id"].as_str().ok_or("id is required")?;
         let engine_id = sample["engine"].as_str().ok_or("engine is required")?;
         let raw = confidence(&sample)?;
+        if let Some(mapping) = &source_mapping {
+            mapping.validate_sample(&sample)?;
+        }
         if !ids.insert(id.to_owned()) {
             return Err("duplicate sample identity".into());
         }
@@ -79,7 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut profile =
             RecognitionSourceProfile::new("ja.ocr.user-segment.v1", RecognitionSource::Ocr);
         profile.required_signals = vec![RecognizerSignal::Confidence];
-        let evidence = adapt_ocr_evidence(
+        let mut evidence = adapt_ocr_evidence(
             text,
             OcrEvidencePayload {
                 recognizer: RecognizerIdentity {
@@ -116,13 +159,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 regions: vec![],
             },
         )?;
+        if let Some(mapping) = &source_mapping {
+            evidence.recognizer = mapping.rule.recognizer.clone();
+            evidence.profile = mapping.rule.profile.clone();
+            let c = &mut evidence.confidences[0];
+            c.granularity = mapping.rule.granularity;
+            c.aggregation = Some(mapping.rule.aggregation.clone());
+            c.score = raw.map(|value| RawScore {
+                value,
+                ..mapping.rule.threshold.clone()
+            });
+            evidence.validate(text, RecognitionSource::Ocr)?;
+        }
         let annotations = [SourceAnnotation {
             span: ByteSpan::whole(text),
             data: serde_json::json!({"ocr_engine":engine_id,"ocr_confidence":raw,"document_id":document,
                 "confidence_scale":sample["confidence_scale"],"image_position":sample["image_position"],"image_column_from_right":sample["image_column_from_right"]}),
         }];
         let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, document, id);
-        input.domain = statistics_domain;
+        input.domain =
+            statistics_domain.or_else(|| source_mapping.as_ref().map(|m| m.rule.domain.as_str()));
         input.annotations = &annotations;
         input.recognizer_evidence = Some(&evidence);
         let report = engine.evaluate_recognition(input)?;
@@ -136,6 +192,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             return Err("recognition observation contract violation".into());
         }
+        if let Some(mapping) = &source_mapping {
+            let combined = mapping.rule.combine(report.clone())?;
+            combined.validate()?;
+            source_reports.push(combined);
+        }
         reports.push(report);
     }
     if reports.is_empty() {
@@ -146,14 +207,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "review_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Review).count(),
         "low_risk_count":0,"slm_calls":0,"gold_used_for_inference":false,
         "statistics_enabled":statistics_domain.is_some(),"sparse_review_enabled":sparse_review,
-        "score_semantics":"uncalibrated_engine_score_direction_and_aggregation_unknown"});
-    let output = serde_json::json!({"schema_version":"kzn.recognition.observation.v1","summary":summary,"reports":reports});
+        "score_semantics":if source_mapping.is_some() {"uncalibrated_explicit_source_mapping"} else {"uncalibrated_engine_score_direction_and_aggregation_unknown"}});
+    let output = if source_mapping.is_some() {
+        serde_json::json!({"schema_version":"kzn.recognition.source_review_observation.v1","reports":source_reports})
+    } else {
+        serde_json::json!({"schema_version":"kzn.recognition.observation.v1","summary":summary,"reports":reports})
+    };
     let path = std::path::PathBuf::from(&args[1]);
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, serde_json::to_string_pretty(&output)?)?;
-    println!("{summary}");
+    if source_mapping.is_some() {
+        println!(
+            "{}",
+            serde_json::json!({"decision_scope":"base","base_summary":summary})
+        );
+    } else {
+        println!("{summary}");
+    }
     Ok(())
 }
 
@@ -180,6 +252,55 @@ mod tests {
             serde_json::json!({"confidence":false}),
         ] {
             assert!(confidence(&value).is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod source_mapping_tests {
+    use super::*;
+    #[test]
+    fn only_explicit_engine_scale_and_source_bind_to_rule() {
+        let rule = ConfidenceReviewRule {
+            id: "fixture.rule".into(),
+            recognizer: RecognizerIdentity {
+                engine: "engine".into(),
+                model: Some("m".into()),
+                version: Some("v".into()),
+                decoder: Some("d".into()),
+            },
+            profile: RecognitionSourceProfile {
+                id: "fixture".into(),
+                source: RecognitionSource::Ocr,
+                transcription_policy_id: Some("raw.v1".into()),
+                required_signals: vec![],
+            },
+            domain: "fixture".into(),
+            granularity: ConfidenceGranularity::Segment,
+            aggregation: "fixture.mean".into(),
+            threshold: RawScore {
+                value: 0.5,
+                meaning: ConfidenceMeaning::EngineScore,
+                direction: ConfidenceDirection::HigherIsBetter,
+                range: Some([0.0, 1.0]),
+                calibration_id: None,
+                target: Some("token.mean".into()),
+            },
+        };
+        let mapping = SourceMapping {
+            expected_engine: "declared.engine".into(),
+            expected_scale: "declared.scale".into(),
+            rule,
+        };
+        mapping.rule.validate().unwrap();
+        let sample = serde_json::json!({"engine":"declared.engine","confidence_scale":"declared.scale","source":"ocr","confidence":null});
+        mapping.validate_sample(&sample).unwrap();
+        for key in ["engine", "confidence_scale", "source"] {
+            let mut wrong = sample.clone();
+            wrong[key] = serde_json::json!("unknown");
+            assert!(mapping.validate_sample(&wrong).is_err());
+            wrong.as_object_mut().unwrap().remove(key);
+            assert!(mapping.validate_sample(&wrong).is_err());
         }
     }
 }

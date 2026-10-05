@@ -113,3 +113,5 @@ OCR 1kのtrain500件によるPOS付き統計assetと、small/core/fullのdevelop
 source confidenceのengine接続・統合レポートを追加（2026-10-06）。既存reviewと確認要求をOR統合し、高confidenceでもreviewを取り消さない。[契約](docs/recognition-confidence-review.md)。
 
 source統合レポートの品質集計を追加（2026-10-06）。統合後summaryとbase_summaryを分離し、旧観察形式を維持。[契約](docs/recognition-confidence-review.md)。
+
+OCR 1kの明示source mappingとtrain下位10%境界によるdevelopment比較を追加（2026-10-06）。confidenceのreview9件は既存統計review内で、OR追加検出は0。[結果](docs/ocr-synth-1k.md)。
