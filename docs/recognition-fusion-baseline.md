@@ -65,3 +65,4 @@ OOFに変更するのは統計特徴の構築のみ。モデル・標準化方�
 developmentを用いた設計修正後の結果であり、**本番採用・品質受入は引き続き未実施**。正しく読めた確率やlow_riskへ変換しない。SLM呼出0、runtime policy変更なし。calibration/testの特徴生成・推論・閾値調整なし。次はこの候補を固定して欠測/空入力等の適用範囲とCPU費用を整理し、独立評価前の受入条件を定義する。追加Nが必要になればユーザーへ依頼し、自動収集・ASR実行は行わない。
 
 検証: fusion7テスト（OOF追加3）、全example all-features/offline check、3辞書matrix、small再実行byte/hash一致、PowerShell構文とformat/diff。詳細出力は`target/kzn-ocr-synth-1k/oof/`、集約は`summary.json`。
+固定候補の欠測/空入力別監査とrelease CPU観察を追加。[適用範囲・CPU・受入ゲート](recognition-fusion-scope-cpu.md)。

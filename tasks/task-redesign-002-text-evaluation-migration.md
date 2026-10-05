@@ -397,3 +397,11 @@ runner契約2件、全example all-features/offline check、3辞書比較、全60
 - [ ] 適用範囲/CPU費用・独立受入条件、校正とtest受入
 
 [結果](../docs/recognition-fusion-baseline.md)。Status=progress。fusion全7テスト、全example all-features/offline check、3辞書matrix、small再実行hash一致、PowerShell構文とformat/diff成功。calibration/test推論・runtime変更なし。性能改善はdevelopment観察に限定する。
+## 固定候補のscope/CPU監査（2026-10-06）
+
+- [x] 候補/asset/report hash固定、再学習なしの予測再現と欠測/空入力別集計
+- [x] release計測sidecarと3辞書×3回のCPU/ロード/メモリ観察、全report hash一致
+- [x] 独立受入ゲートの対象・順序・未決要件を文書化
+- [ ] 最終融合処理のCPU測定、運用上の数値要件、未評価区分のデータ充足、校正/test受入
+
+[結果と範囲](../docs/recognition-fusion-scope-cpu.md)。Status=progress。fusion9テスト・runner2テスト・全example all-features/offline check成功。非空の不一致は20/26、空文字の8/8を別集計。runtime policy変更、再学習、calibration/test評価なし。

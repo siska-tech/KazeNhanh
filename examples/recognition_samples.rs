@@ -32,6 +32,14 @@ impl SourceMapping {
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    let timing_path = if args.len() >= 2 && args[args.len() - 2] == "--timings" {
+        let path = args.pop().expect("timing path");
+        args.pop();
+        Some(std::path::PathBuf::from(path))
+    } else {
+        None
+    };
+    let mut call_times = Vec::new();
     let sparse_review = args.last().is_some_and(|a| a == "--sparse-review");
     if sparse_review {
         args.pop();
@@ -60,8 +68,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             None
         };
     if args.len() != 2 && args.len() != 5 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--source-rule mapping.json] [--dictionary path] [--sparse-review]".into());
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--source-rule mapping.json] [--dictionary path] [--sparse-review] [--timings timing.json]".into());
     }
+    if timing_path
+        .as_ref()
+        .is_some_and(|p| p == std::path::Path::new(&args[1]))
+    {
+        return Err("timing and report paths must differ".into());
+    }
+    let load_start = std::time::Instant::now();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let assets = SudachiConfig::from_paths(
         dictionary_path.unwrap_or_else(|| root.join("resources/sudachi/system.dic")),
@@ -91,6 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         engine = engine.with_sparse_statistics_review();
     }
+    let load_ms = load_start.elapsed().as_secs_f64() * 1000.0;
     if std::fs::metadata(&args[0])?.len() > 16 * 1024 * 1024 {
         return Err("dataset exceeds 16 MiB".into());
     }
@@ -181,6 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             statistics_domain.or_else(|| source_mapping.as_ref().map(|m| m.rule.domain.as_str()));
         input.annotations = &annotations;
         input.recognizer_evidence = Some(&evidence);
+        let call_start = std::time::Instant::now();
         let report = engine.evaluate_recognition(input)?;
         report.validate()?;
         if report.original_text != text
@@ -196,6 +213,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let combined = mapping.rule.combine(report.clone())?;
             combined.validate()?;
             source_reports.push(combined);
+        }
+        if timing_path.is_some() {
+            call_times.push(serde_json::json!({"id":id,"empty":text.is_empty(),"scalar_count":text.chars().count(),"elapsed_ms":call_start.elapsed().as_secs_f64()*1000.0}));
         }
         reports.push(report);
     }
@@ -218,6 +238,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, serde_json::to_string_pretty(&output)?)?;
+    if let Some(path) = timing_path {
+        if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+            std::fs::create_dir_all(parent)?;
+        }
+        use sha2::{Digest, Sha256};
+        let artifact = serde_json::json!({"schema_version":"kzn.recognition.timing.v1","build":if cfg!(debug_assertions){"debug"}else{"release"},"scope":"engine evaluation + report validation + source combination/validation; excludes input adaptation and serialization; no logistic margin scoring","load_scope":"Sudachi config/hash + engine + statistics read/hash/load","load_ms":load_ms,"input_sha256":format!("{:x}",Sha256::digest(data.as_bytes())),"source_enabled":source_mapping.is_some(),"slm_calls":0,"calls":call_times});
+        std::fs::write(path, serde_json::to_vec_pretty(&artifact)?)?;
+    }
     if source_mapping.is_some() {
         println!(
             "{}",

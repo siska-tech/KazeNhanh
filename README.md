@@ -119,3 +119,5 @@ OCR 1kの明示source mappingとtrain下位10%境界によるdevelopment比較�
 軽量学習fusionの3辞書development比較を追加（2026-10-06）。テキスト統合は誤警報が多く本番採用せず、統計特徴のtrain/development分布差を確認。[結果](docs/recognition-fusion-baseline.md)。
 
 OOF統計特徴で融合を再比較（2026-10-06）。small/core/fullとも不一致28/34件、正常例へのflag2/66件。development観察であり本番未採用・test未使用。[手順と限界](docs/recognition-fusion-baseline.md)。
+
+2026-10-06: 固定OOF候補のscope/CPU監査を追加。非空入力の不一致検出20/26と空文字8/8を区別し、3辞書のrelease計測と受入前の未決条件を整理。[詳細](docs/recognition-fusion-scope-cpu.md)。

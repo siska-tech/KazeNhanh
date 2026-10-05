@@ -5,6 +5,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+#[path = "fusion_baseline/audit.rs"]
+mod audit;
 #[path = "fusion_baseline/oof.rs"]
 mod oof;
 const N: usize = 8;
@@ -203,7 +205,7 @@ fn disjoint(train: &Data, dev: &Data) -> Result<()> {
     }
     Ok(())
 }
-#[derive(Serialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct Model {
     indices: Vec<usize>,
     means: Vec<f64>,
@@ -301,6 +303,9 @@ fn evaluate(model: &Model, rows: &[Row]) -> Value {
 }
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
+    if args.first().is_some_and(|v| v == "audit-frozen") {
+        return audit::run(&args);
+    }
     if args.len() == 4 && args[0] == "prepare-oof" {
         return oof::prepare(
             &read(&args[1])?,

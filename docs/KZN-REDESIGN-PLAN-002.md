@@ -282,3 +282,6 @@ train500で標準化/固定logisticモデルを学習しdevelopment100で3特徴
 ## 29. Out-of-fold統計特徴と融合再比較（2026-10-06）
 
 train500をdocument/origin/非空転記の連結groupで5分割し、各例を含まない400件の統計資産で特徴化。developmentは全train500の資産を使用。補集合hash・reportのfold資産照合・gold除外を追加。同じ学習条件のsmall/core/full統合はflag不一致28/34・一致2/66（前回一致64/66）。本番未採用、校正/test未使用、SLM0。外部生成コード変更に対しては、旧来歴を保った監査済み射影/mappingを固定hashで再利用。[手順・結果・限界](recognition-fusion-baseline.md)。次は適用範囲/CPU費用と独立受入条件の整理。R2はprogressを維持。
+## 30. 固定候補の適用範囲・CPU観察（2026-10-06）
+
+再学習なしの候補hash固定・予測再現監査を追加。3辞書とも非空入力はflag不一致20/26・一致2/66、空文字かつconfidence欠測は8/8。非空かつconfidence欠測は実例0で未評価。releaseの100件逐次処理を各3回測定し、常駐call p95は約0.27〜0.30ms（logistic計算と入出力を除く）。詳細な対象範囲と独立受入ゲートを[別文書](recognition-fusion-scope-cpu.md)に記録。SLO・品質数値要件・校正/test受入は未完了。R2はprogress。

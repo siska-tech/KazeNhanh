@@ -81,3 +81,5 @@ R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値�
 2026-10-06: confidence/text/integratedの固定logistic比較を実装。train限定標準化・学習、development評価、重複/identity検査を追加。統合は誤警報64/66で未採用。次はout-of-fold統計特徴の検討。[結果](../docs/recognition-fusion-baseline.md)。
 
 2026-10-06: group単位のOOF統計特徴を実装。3辞書の統合flagは不一致28/34・一致2/66へ。R2は独立受入/校正/CPU条件を継続し、本番policyは変更しない。[詳細](../docs/recognition-fusion-baseline.md)。
+
+2026-10-06: [固定候補のscope/CPU監査](../docs/recognition-fusion-scope-cpu.md)を追加。欠測と空入力を分離し、3辞書release計測・report一致を検証。運用数値要件・最終融合CPU・未評価区分・独立受入は継続。
