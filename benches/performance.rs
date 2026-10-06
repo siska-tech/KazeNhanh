@@ -1,6 +1,6 @@
 use std::error::Error as StdError;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
@@ -137,5 +137,16 @@ fn past_seconds(seconds: i64) -> Time {
     Time::new(now - seconds, 0)
 }
 
-criterion_group!(performance, bench_summarize, bench_git_native_rag);
+fn criterion_config() -> Criterion {
+    let output = std::env::var_os("CRITERION_OUTPUT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("target/criterion"));
+    Criterion::default().output_directory(&output)
+}
+
+criterion_group! {
+    name = performance;
+    config = criterion_config();
+    targets = bench_summarize, bench_git_native_rag
+}
 criterion_main!(performance);

@@ -1,0 +1,9 @@
+{
+    "package":  "SudachiDict-core",
+    "version":  "20250129",
+    "url":  "https://files.pythonhosted.org/packages/06/26/88198636c93ae3ea04f9773603985db956636696e8968be4f4dd35693550/SudachiDict_core-20250129-py3-none-any.whl",
+    "sha256":  "572b25aa9754fc23410984f895cfbcb154ccb09691fbb6361834671edccdd5eb",
+    "dictionary_entry":  "sudachidict_core/resources/system.dic",
+    "source":  "https://pypi.org/project/SudachiDict-core/20250129/",
+    "dictionary_sha256":  "b0c8b89d1c803c7920659091d3ca0b05b248ab86d8cfce1010730ca80b521655"
+}

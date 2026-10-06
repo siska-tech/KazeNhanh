@@ -1,0 +1,75 @@
+# 0.1 → 0.2移行ガイド
+
+> 2026-10-04追記: 以下の手順は現行API用。今後は[recognition risk再設計案002](KZN-REDESIGN-PLAN-002.md)に従いOCR/ASR向けAPIを明示追加する。現acceptableは認識正解を保証しない。R0の追加APIと利用例は[recognition API](recognition-api.md)を参照。旧acceptableを新low_riskへ変換しない。
+
+2026-10-04、P1でcrateを分離した。0.2は開発版。P2でPrimaryRulesとDomainProfileを標準経路へ追加した。[一次検出の範囲](primary-detection.md)を参照。
+
+## 新しい評価API
+
+```toml
+[dependencies]
+kaze_nhanh = { path = "/path/to/KazeNhanh" }
+```
+
+defaultはSudachiのみ。モデル、Git、Markdown、Candle、生成tokenizerは通常依存に含まない。
+
+```rust,ignore
+use kaze_nhanh::{japanese_engine, EvaluationConfig, SudachiConfig, SudachiMode, TextInput};
+
+let assets = SudachiConfig::from_paths("system.dic", "sudachi.json", SudachiMode::C)?;
+let engine = japanese_engine(assets, EvaluationConfig::default())?;
+let report = engine.evaluate(TextInput::new("東京都で日本語を解析します。"))?;
+```
+
+dictionary/settingsはowned bytesとしてengineに保持される。static化やBox::leakは不要。辞書・設定SHA256とModeをprovenanceへ記録し、助詞・助動詞を含む全形態素を原文位置で解析する。
+
+P2の標準経路はprofileの制約と少数ルールを評価する。validity/naturalnessはheuristic、semantic_consistencyはnull。必要な二次判定はdisabled/保留で、SLM呼出0。形態素解析成功だけを「妥当」へ置換しない。独自PrimaryDetectorも注入できるが、品質受入は利用者が検証する。Report schemaはP3制御契約のv3へ更新。
+
+```powershell
+cargo run --locked --example evaluate -- "東京都で自然な日本語を解析します。"
+```
+
+## 最小core / 別backend
+
+```toml
+kaze_nhanh = { path = "/path/to/KazeNhanh", default-features = false }
+```
+
+`EvaluationEngine::new(Arc<dyn MorphAnalyzer>, EvaluationConfig)`で別backendを明示注入する。coreの通常依存はserde/serde_json/thiserrorだけ。評価ErrorやMorphemeにSudachi/Candle/Gitの固有型は含めない。
+
+## 旧Git・要約API
+
+```toml
+kaze_nhanh = { path = "/path/to/KazeNhanh", default-features = false, features = ["legacy"] }
+```
+
+旧KazeNhanhEngine、EngineConfig、foundation、GitNativeRAG出力等はlegacy featureで同じroot pathへ再exportされる。旧APIは従来どおりモデルとstatic辞書を必要とし、要約の意味を維持する。新evaluate APIへ意味を変更しない。
+
+またはworkspace内の`kaze_nhanh_legacy` crateを直接依存に指定する。旧コードのimport先をkaze_nhanh_legacyへ変更し、従来のEngineConfigを使う。旧runtimeの資産検証は[推論エンジン](inference_engine.md)を参照。
+
+## Featureと検証
+
+| 構成 | 評価core | 新Sudachi | 旧Git/Markdown/Candle | 用途 |
+| --- | --- | --- | --- | --- |
+| default | 有効 | 有効 | 無効 | 標準のモデル不要評価 |
+| no-default-features | 有効 | 無効 | 無効 | 別backend/最小build |
+| no-default + legacy | 有効 | 無効 | 有効 | 旧APIの互換利用 |
+| mock_inference | 有効 | defaultに従う | 有効 | 明示fake workflow試験 |
+
+mock_inferenceはlegacyを有効にし、通常コンストラクタをfakeへ切り替えない。P3のSecondaryJudge/Factory/Workerはbackend非依存契約として利用できる。実験用自然さadapterはqwen featureで明示利用し、legacy推論featureを新評価エンジンへ接続しない。
+
+`verify.ps1 -Offline`はcore/default/minimalの依存禁止、実Sudachi、Modeと原文span、並行評価、旧本番runtime、fake workflow、全workspace試験を確認する。辞書はsetup-dev.ps1で事前取得する。
+
+P3制御契約: optional SecondaryWorkerを明示接続すると選択的judgeを実行できる。標準CLIはworker未接続。reference不足はcontext_missing/呼出0、不正出力・予算・timeoutは保留。[接続・制約・実モデル残作業](secondary-judging.md)。
+
+P3実験用adapter: optional qwen feature/crateでCPUの自然さpaired-label判定を追加。固定資産セットアップと独立token ID/CPU smokeは[Qwen手順](qwen-judge.md)を参照。実運用品質・意味adapter・CPU SLOは未受入。
+
+Recognition R1への移行: reportはkzn.recognition.v2、新typed evidenceをRecognitionInput.recognizer_evidenceへ追加可能。旧v1 JSONは新consumerで再評価する。原文を再解釈せず、旧evaluation.v3は維持。[R1契約と互換性](recognition-source-evidence.md)。
+
+Recognition R2統計evidence（先行実装）: LightweightStatisticsをwith_statisticsで明示接続し、RecognitionInput.domainと資産domain・解析identityが一致した場合のみ観察値を返す。既定の判断・schema v2は維持。頻度を認識誤り確率に変換しない。[資産生成と手順](recognition-statistics.md)。R2全体の品質受入は未完了。
+
+2026-10-05: with_candidate_disagreement_review()で、raw N-best差をreviewへ送るpolicyを明示選択できる。既定の判断とschema v2は維持。候補不一致を認識誤り確定・risk確率にしない。[候補review契約](recognition-candidate-review.md)。
+
+POS統計追加: StatisticsArtifact/StatisticsObservationにoptionalなposフィールドを追加。literal使用時は旧動作ならpos: Noneを指定する。fitはv1を維持、fit_with_posはv2を生成。[資産/JSON互換性](recognition-pos-statistics.md)。
+
+文字種観測（2026-10-05）: RecognitionReportにoptional string_featuresを追加。旧JSON欠落/nullは未観測。Rust literal構築にはstring_features: Noneが必要。旧readerで新フィールドを読む場合は更新する。[契約](recognition-string-features.md)。

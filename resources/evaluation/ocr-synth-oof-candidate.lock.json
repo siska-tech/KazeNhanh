@@ -1,0 +1,25 @@
+{
+    "schema_version":  "kzn.fusion.candidate_lock.v1",
+    "source_commit":  "10aa4258e27e328f622b55d3e1aacc4cba42b1f3",
+    "quality_accepted":  false,
+    "rows":  [
+                 {
+                     "edition":  "small",
+                     "frozen_sha256":  "7822296831778bc0c3f8f57a677bffe002037bad361afcadb21ea32641a99f34",
+                     "statistics_sha256":  "cd0f14de8dd66712f04c3c67e27ffc4f95a4928f5e7c982077c370f11cfaef00",
+                     "report_sha256":  "237210a86d06a57de9da86e5372a8d050d7ade2a4b677901b667328d01119768"
+                 },
+                 {
+                     "edition":  "core",
+                     "frozen_sha256":  "4d29de613a5ff392ef09fa6c95a078c4557f259a16968b2a1f1a30296bf901e6",
+                     "statistics_sha256":  "25be699dc0d0bee833d5965cd11760277c9cb900caefad93a314207d1fa2e3c7",
+                     "report_sha256":  "afcb01049ea0caff2c97b2d249feba7f6f59abdc0254eee49b5eee0624074070"
+                 },
+                 {
+                     "edition":  "full",
+                     "frozen_sha256":  "22701451a35ff1e8e6915734aed86d83e2ae2754c51b398d1d0904417da8e358",
+                     "statistics_sha256":  "7e79598d4bae90433248dd500a55d2fb964ff9501813c5b7cb53b6aecc3b03ba",
+                     "report_sha256":  "3830623529370f7191f0030b3b515f730dba8df8e03fedd41a03a5a0165cdb5c"
+                 }
+             ]
+}

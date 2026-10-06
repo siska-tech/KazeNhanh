@@ -1,0 +1,81 @@
+{
+    "dataset":  "ppocrv6-medium.user-001",
+    "document_id":  "user-image-001",
+    "source":  "user-provided PP-OCRv6 medium",
+    "usage":  "development_observation",
+    "labels_confirmed":  true,
+    "evaluated_on":  "2026-10-04",
+    "profile":  "ja.ocr.v1",
+    "rules_id":  "kzn.primary_rules.v1",
+    "prompt_id":  "kzn.qwen.naturalness-pair.v1",
+    "model_id":  "qwen2.5-0.5b-instruct-q4_k_m.v1",
+    "model_sha256":  "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "case_count":  5,
+    "ocr_mismatch_count":  3,
+    "gate_missed_candidates":  3,
+    "cascade_judge_attempts":  0,
+    "offline_comparison_forwards":  5,
+    "quality_accepted":  false,
+    "rows":  [
+                 {
+                     "id":  "ppocrv6-medium.user-001.01",
+                     "text":  "、運動之始め了",
+                     "ocr_confidence":  0.596,
+                     "transcription":  "運動を始める",
+                     "transcription_status":  "user_confirmed_2026-10-04",
+                     "ocr_mismatch":  true,
+                     "primary_verdict":  "acceptable",
+                     "secondary_needed":  false,
+                     "qwen_naturalness":  0.9991133213043213,
+                     "comparison_status":  "completed"
+                 },
+                 {
+                     "id":  "ppocrv6-medium.user-001.02",
+                     "text":  "節約する",
+                     "ocr_confidence":  0.767,
+                     "transcription":  "節約する",
+                     "transcription_status":  "user_confirmed_2026-10-04",
+                     "ocr_mismatch":  false,
+                     "primary_verdict":  "acceptable",
+                     "secondary_needed":  false,
+                     "qwen_naturalness":  0.99994957447052,
+                     "comparison_status":  "completed"
+                 },
+                 {
+                     "id":  "ppocrv6-medium.user-001.03",
+                     "text":  "規則正しい生活毛可",
+                     "ocr_confidence":  0.763,
+                     "transcription":  "規則正しい生活をする",
+                     "transcription_status":  "user_confirmed_2026-10-04",
+                     "ocr_mismatch":  true,
+                     "primary_verdict":  "acceptable",
+                     "secondary_needed":  false,
+                     "qwen_naturalness":  0.9999731183052063,
+                     "comparison_status":  "completed"
+                 },
+                 {
+                     "id":  "ppocrv6-medium.user-001.04",
+                     "text":  "健康的になる",
+                     "ocr_confidence":  0.880,
+                     "transcription":  "健康的になる",
+                     "transcription_status":  "user_confirmed_2026-10-04",
+                     "ocr_mismatch":  false,
+                     "primary_verdict":  "acceptable",
+                     "secondary_needed":  false,
+                     "qwen_naturalness":  0.9998157024383545,
+                     "comparison_status":  "completed"
+                 },
+                 {
+                     "id":  "ppocrv6-medium.user-001.05",
+                     "text":  "則金とする",
+                     "ocr_confidence":  0.622,
+                     "transcription":  "貯金をする",
+                     "transcription_status":  "user_confirmed_2026-10-04",
+                     "ocr_mismatch":  true,
+                     "primary_verdict":  "acceptable",
+                     "secondary_needed":  false,
+                     "qwen_naturalness":  0.9997503161430359,
+                     "comparison_status":  "completed"
+                 }
+             ]
+}

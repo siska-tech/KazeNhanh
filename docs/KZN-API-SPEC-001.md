@@ -1,3 +1,5 @@
+> 2026-10-04: この文書は旧0.1 Git/要約APIの履歴です。新しいテキスト評価契約は[API仕様002](KZN-API-SPEC-002.md)、[構成002](KZN-ARC-DESIGN-002.md)、[要件002](KZN-REQ-SPEC-002.md)を参照。
+
 # **KazeNhanh (カゼニャン) インターフェース設計書 (API設計書)**
 
 **文書ID:** KZN-API-SPEC-001

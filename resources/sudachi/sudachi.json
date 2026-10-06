@@ -1,0 +1,11 @@
+{
+  "inputTextPlugin": [
+    { "class": "com.worksap.nlp.sudachi.DefaultInputTextPlugin" }
+  ],
+  "oovProviderPlugin": [
+    { "class": "com.worksap.nlp.sudachi.MeCabOovPlugin" }
+  ],
+  "pathRewritePlugin": [
+    { "class": "com.worksap.nlp.sudachi.JoinNumericPlugin", "enableNormalize": true }
+  ]
+}

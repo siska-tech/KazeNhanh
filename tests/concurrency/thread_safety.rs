@@ -1,19 +1,20 @@
+#[path = "../common/mod.rs"]
+mod common;
+
 use std::error::Error as StdError;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use git2::{Repository, Signature, Time};
-use kaze_nhanh::{
-    EngineConfig, GitNativeRagContent, GitNativeRagReport, GitReportOptions, KazeNhanhEngine,
-};
+use kaze_nhanh::{GitNativeRagContent, GitReportOptions, KazeNhanhEngine};
 use tempfile::TempDir;
 
 const THREAD_COUNT: usize = 8;
 
 fn test_engine() -> KazeNhanhEngine {
-    let config = EngineConfig::new(b"model", b"dict", br#"{}"#);
-    KazeNhanhEngine::new(config).expect("engine should initialize")
+    let config = common::nlp_config();
+    kaze_nhanh::test_support::mock_engine(config).expect("engine should initialize")
 }
 
 #[test]
@@ -51,13 +52,13 @@ fn summarize_with_details_is_thread_safe() {
 }
 
 #[test]
-fn git_native_rag_handles_parallel_invocations() -> Result<(), Box<dyn StdError>> {
+fn git_native_rag_handles_parallel_invocations() -> Result<(), Box<dyn StdError + Send + Sync>> {
     let engine = Arc::new(test_engine());
 
     let handles: Vec<_> = (0..THREAD_COUNT)
         .map(|idx| {
             let engine = Arc::clone(&engine);
-            thread::spawn(move || -> Result<(), Box<dyn StdError>> {
+            thread::spawn(move || -> Result<(), Box<dyn StdError + Send + Sync>> {
                 let repo_dir = TempDir::new()?;
                 let repo = Repository::init(repo_dir.path())?;
 
@@ -84,7 +85,10 @@ fn git_native_rag_handles_parallel_invocations() -> Result<(), Box<dyn StdError>
 
                 let report = engine.run_git_native_rag(&options)?;
                 match report.content {
-                    GitNativeRagContent::Synthesized { ref prompt, ref summary } => {
+                    GitNativeRagContent::Synthesized {
+                        ref prompt,
+                        ref summary,
+                    } => {
                         assert!(prompt.contains("docs/notes.md"));
                         assert!(summary.contains("mock-bytes"));
                     }
@@ -112,7 +116,7 @@ fn commit_markdown(
     relative_path: &str,
     contents: &str,
     timestamp: Time,
-) -> Result<(), Box<dyn StdError>> {
+) -> Result<(), Box<dyn StdError + Send + Sync>> {
     std::fs::create_dir_all(
         repo.workdir()
             .ok_or_else(|| "repository missing working directory")?
@@ -154,4 +158,3 @@ fn past_seconds(seconds: i64) -> Time {
         .as_secs() as i64;
     Time::new(now - seconds, 0)
 }
-

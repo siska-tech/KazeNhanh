@@ -1,0 +1,234 @@
+//! Explicit source-bound review requests. No default thresholds or correctness claims.
+use super::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConfidenceReviewRule {
+    pub id: String,
+    pub recognizer: RecognizerIdentity,
+    pub profile: RecognitionSourceProfile,
+    pub domain: String,
+    pub granularity: ConfidenceGranularity,
+    pub aggregation: String,
+    /// Value is the strict review boundary; all other fields describe the expected scale.
+    pub threshold: RawScore,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConfidenceReviewObservation {
+    /// Unmodified input, including span, score and shared dependencies.
+    pub observation: ConfidenceObservation,
+    /// None means not applicable, false only means the explicit threshold was not crossed.
+    pub review_requested: Option<bool>,
+    pub reason: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConfidenceReviewAssessment {
+    pub rule_id: String,
+    pub review_requested: bool,
+    pub observations: Vec<ConfidenceReviewObservation>,
+    /// Global binding failure or an empty confidence set, never a normality claim.
+    pub unavailable_reason: Option<String>,
+}
+fn identity(value: &str) -> bool {
+    !value.trim().is_empty() && value.len() <= 256
+}
+impl ConfidenceReviewRule {
+    pub fn validate(&self) -> Result<(), EvaluationError> {
+        self.threshold.validate().map_err(|_| {
+            EvaluationError::InvalidConfig("invalid confidence threshold scale".into())
+        })?;
+        if ![
+            self.id.as_str(),
+            self.domain.as_str(),
+            self.aggregation.as_str(),
+            self.recognizer.engine.as_str(),
+            self.profile.id.as_str(),
+        ]
+        .into_iter()
+        .all(identity)
+            || [
+                &self.recognizer.model,
+                &self.recognizer.version,
+                &self.recognizer.decoder,
+                &self.profile.transcription_policy_id,
+                &self.threshold.target,
+            ]
+            .into_iter()
+            .any(|v| v.as_deref().is_none_or(|v| !identity(v)))
+            || self.threshold.meaning == ConfidenceMeaning::Unknown
+            || self.threshold.direction == ConfidenceDirection::Unknown
+        {
+            return Err(EvaluationError::InvalidConfig("confidence rule requires explicit identity, transcription policy, score meaning/direction/target and aggregation".into()));
+        }
+        Ok(())
+    }
+    /// Adapter-side assessment only. Callers must not turn false/None into low-risk acceptance.
+    pub fn assess(
+        &self,
+        text: &str,
+        source: RecognitionSource,
+        domain: Option<&str>,
+        evidence: &RecognizerEvidence,
+    ) -> Result<ConfidenceReviewAssessment, EvaluationError> {
+        self.validate()?;
+        evidence.validate(text, source)?;
+        let binding_reason = if evidence.recognizer != self.recognizer {
+            Some("recognizer_mismatch")
+        } else if evidence.profile != self.profile {
+            Some("profile_mismatch")
+        } else if domain != Some(self.domain.as_str()) {
+            Some("domain_missing_or_mismatch")
+        } else {
+            None
+        };
+        let mut rows = Vec::with_capacity(evidence.confidences.len());
+        for observation in &evidence.confidences {
+            let mut reason = binding_reason;
+            if reason.is_none() {
+                reason = if observation.status != RecognitionEvidenceStatus::Observed {
+                    Some("confidence_not_observed")
+                } else if observation.granularity != self.granularity {
+                    Some("granularity_mismatch")
+                } else if observation.aggregation.as_deref() != Some(self.aggregation.as_str()) {
+                    Some("aggregation_missing_or_mismatch")
+                } else if observation.span.start() == observation.span.end() {
+                    Some("empty_confidence_scope")
+                } else {
+                    None
+                };
+            }
+            let mut review = None;
+            if reason.is_none() {
+                let score = observation
+                    .score
+                    .as_ref()
+                    .expect("validated observed score");
+                let mut descriptor = score.clone();
+                descriptor.value = self.threshold.value;
+                if descriptor != self.threshold {
+                    reason = Some("score_semantics_mismatch");
+                } else {
+                    review = Some(match score.direction {
+                        ConfidenceDirection::HigherIsBetter => score.value < self.threshold.value,
+                        ConfidenceDirection::LowerIsBetter => score.value > self.threshold.value,
+                        ConfidenceDirection::Unknown => {
+                            unreachable!("rule rejected unknown direction")
+                        }
+                    });
+                }
+            }
+            rows.push(ConfidenceReviewObservation {
+                observation: observation.clone(),
+                review_requested: review,
+                reason: reason
+                    .unwrap_or(if review == Some(true) {
+                        "threshold_crossed"
+                    } else {
+                        "threshold_not_crossed"
+                    })
+                    .into(),
+            });
+        }
+        Ok(ConfidenceReviewAssessment {
+            rule_id: self.id.clone(),
+            review_requested: rows.iter().any(|r| r.review_requested == Some(true)),
+            unavailable_reason: binding_reason
+                .or(if rows.is_empty() {
+                    Some("confidence_not_provided")
+                } else {
+                    None
+                })
+                .map(str::to_owned),
+            observations: rows,
+        })
+    }
+}
+
+pub const SOURCE_REVIEW_SCHEMA: &str = "kzn.recognition.source_review.v1";
+pub const SOURCE_REVIEW_POLICY: &str = "kzn.recognition.source_review_or.v1";
+
+/// A facade report retaining the unchanged core report and an explicit source rule snapshot.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceReviewReport {
+    pub schema_version: String,
+    pub policy_id: String,
+    pub base: RecognitionReport,
+    pub rule: ConfidenceReviewRule,
+    /// None only when base.recognizer_evidence is absent.
+    pub confidence: Option<ConfidenceReviewAssessment>,
+    pub decision: RecognitionDecision,
+    pub reasons: Vec<String>,
+}
+impl ConfidenceReviewRule {
+    /// Evaluate once through the supplied core engine, then apply source review without a model.
+    pub fn evaluate(
+        &self,
+        engine: &RecognitionEngine,
+        input: RecognitionInput<'_>,
+    ) -> Result<SourceReviewReport, EvaluationError> {
+        self.validate()?;
+        self.combine(engine.evaluate_recognition(input)?)
+    }
+    /// Combine a validated report without re-running morphology or changing its evidence.
+    pub fn combine(&self, base: RecognitionReport) -> Result<SourceReviewReport, EvaluationError> {
+        self.validate()?;
+        base.validate()?;
+        // This experimental policy has no accepted low-risk/calibrated operating region.
+        if base.decision == RecognitionDecision::LowRisk || base.recognition_risk.value.is_some() {
+            return Err(EvaluationError::Contract(
+                "source review supports only unestimated review/undetermined reports".into(),
+            ));
+        }
+        let confidence = base
+            .recognizer_evidence
+            .as_ref()
+            .map(|e| self.assess(&base.original_text, base.source, base.domain.as_deref(), e))
+            .transpose()?;
+        let mut reasons = Vec::new();
+        let base_review = base.decision == RecognitionDecision::Review;
+        let source_review = confidence.as_ref().is_some_and(|c| c.review_requested);
+        if base_review {
+            reasons.push("base_review_required".into());
+        }
+        if source_review {
+            reasons.push("source_confidence_review_required".into());
+        }
+        if confidence.as_ref().is_none_or(|c| {
+            c.unavailable_reason.is_some()
+                || c.observations.iter().any(|o| o.review_requested.is_none())
+        }) {
+            reasons.push("source_confidence_unavailable".into());
+        }
+        let decision = if base_review || source_review {
+            RecognitionDecision::Review
+        } else {
+            reasons.push("low_risk_not_established".into());
+            RecognitionDecision::Undetermined
+        };
+        Ok(SourceReviewReport {
+            schema_version: SOURCE_REVIEW_SCHEMA.into(),
+            policy_id: SOURCE_REVIEW_POLICY.into(),
+            base,
+            rule: self.clone(),
+            confidence,
+            decision,
+            reasons,
+        })
+    }
+}
+impl SourceReviewReport {
+    /// Recompute the source assessment and OR decision. Does not authenticate artifact identities.
+    pub fn validate(&self) -> Result<(), EvaluationError> {
+        let expected = self.rule.combine(self.base.clone())?;
+        if *self != expected {
+            return Err(EvaluationError::Contract(
+                "source review report differs from base evidence/rule/decision".into(),
+            ));
+        }
+        Ok(())
+    }
+}

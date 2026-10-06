@@ -1,0 +1,12 @@
+{"id":"ocr-natural-number","source":"ocr","text":"料金は100円です","candidates":["料金は100円です","料金は700円です"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"asr-homophone","source":"asr","text":"橋に着いた","candidates":["橋に着いた","箸に着いた"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"asr-negation","source":"asr","text":"予約していない","candidates":["予約していない","予約している"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"ocr-spelling","source":"ocr","text":"過す","candidates":["過す","過ごす"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"asr-punctuation","source":"asr","text":"猫","candidates":["猫","猫。"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"ocr-insertion","source":"ocr","text":"猫","candidates":["猫","猫🙂"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"asr-deletion","source":"asr","text":"猫🙂","candidates":["猫🙂","猫"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"ocr-empty-boundary","source":"ocr","text":"","candidates":["","猫"],"baseline":"undetermined","candidate_review":"review"}
+{"id":"ocr-identical","source":"ocr","text":"体系キープ","candidates":["体系キープ","体系キープ"],"baseline":"undetermined","candidate_review":"undetermined"}
+{"id":"asr-truncated-single","source":"asr","text":"あの、その、はい。","candidates":["あの、その、はい。"],"baseline":"undetermined","candidate_review":"undetermined"}
+{"id":"ocr-no-candidates","source":"ocr","text":"型番ZX-900B","candidates":null,"baseline":"undetermined","candidate_review":"undetermined"}
+{"id":"asr-primary-warning","source":"asr","text":"猫猫猫猫猫猫","candidates":null,"baseline":"review","candidate_review":"review"}

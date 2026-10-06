@@ -1,4 +1,6 @@
-﻿# GitNativeRAG パイプライン設計書
+> 0.2/P1: GitNativeRAGはkaze_nhanh_legacyへ移設済み。root APIを使う場合はlegacy featureを指定してください。[0.2移行ガイド](migration-0.2.md)。
+
+# GitNativeRAG パイプライン設計書
 
 GitNativeRAG は FR4「Git Native RAG レポート」シナリオを完結させるためのパイプラインです。本設計書では、アーキテクチャ、データ構造、処理フロー、フォールバック戦略、公開 API、テスト観点を整理します。
 
@@ -134,7 +136,7 @@ fn run_git_native_rag() -> Result<(), kaze_nhanh::KazeNhanhError> {
 
 ## 7. テスト・ドキュメンテーション
 
-- `cargo test` により以下をカバー：
+- `cargo test -p kaze_nhanh_legacy`と`cargo test --features mock_inference`により以下をカバー：
   - `pipeline::git_native_rag::tests` … 差分なし／差分あり／推論失敗経路。
   - `pipeline::correlation_engine::tests` … 見出し突合ロジック。
   - `pipeline::prompt_builder::tests` … カスタムプロンプトや `(no heading)` 処理。

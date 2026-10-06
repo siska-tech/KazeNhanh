@@ -1,0 +1,36 @@
+{
+    "schema_version":  "kzn.local_dataset.lock.v1",
+    "dataset_id":  "kzn-ocr-real",
+    "data_kind":  "measured",
+    "revision":  "1",
+    "files":  [
+                  {
+                      "path":  "dataset-real/kzn-ocr-real.jsonl",
+                      "sha256":  "456472b8b7e0ed4c4984442d82f386df8f0c8fc95cc7cab644526020f0dc0f49"
+                  },
+                  {
+                      "path":  "dataset-real/kzn-ocr-real.manifest.json",
+                      "sha256":  "32a804bde7c57eb790d42876c9e71cd3efd3bf65bcd137b041c908488176c8d2"
+                  },
+                  {
+                      "path":  "dataset-real/sources.lock.json",
+                      "sha256":  "ef7abecdd17bdb983bc7bf16dcbf5e12161278674def2204398c61cc050eff40"
+                  },
+                  {
+                      "path":  "README-real.md",
+                      "sha256":  "0c4bad3bc29b4598d2a5c2a8ed3cb642caa5e041a86d5e9503946b0dc3a1e73a"
+                  },
+                  {
+                      "path":  "ATTRIBUTION-real.md",
+                      "sha256":  "ab6fcc7a50efce82c1b5197a9a443edc608445ca26f3e0d206dd2adb824fbe6a"
+                  },
+                  {
+                      "path":  "real/exclusions.json",
+                      "sha256":  "7863309951fb09de95a9822300499dda668ab6f0c561012157c55c295d78cc51"
+                  },
+                  {
+                      "path":  "ocr-runner/src/main.rs",
+                      "sha256":  "05b767427ef176a14a74dd917bf51879dd8caab5fcc4f0454c648601bfbc191d"
+                  }
+              ]
+}

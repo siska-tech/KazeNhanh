@@ -1,0 +1,33 @@
+{
+    "license":  "Apache-2.0",
+    "files":  [
+                  {
+                      "url":  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/resolve/7ae557604adf67be50417f59c2c2f167def9a775/tokenizer.json",
+                      "name":  "tokenizer.json",
+                      "sha256":  "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+                  },
+                  {
+                      "url":  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/resolve/7ae557604adf67be50417f59c2c2f167def9a775/tokenizer_config.json",
+                      "name":  "tokenizer_config.json",
+                      "sha256":  "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+                  },
+                  {
+                      "url":  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/resolve/7ae557604adf67be50417f59c2c2f167def9a775/config.json",
+                      "name":  "config.json",
+                      "sha256":  "18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45"
+                  },
+                  {
+                      "url":  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/resolve/7ae557604adf67be50417f59c2c2f167def9a775/LICENSE",
+                      "name":  "LICENSE",
+                      "sha256":  "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e"
+                  },
+                  {
+                      "url":  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+                      "name":  "model.gguf",
+                      "sha256":  "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
+                  }
+              ],
+    "tokenizer_revision":  "7ae557604adf67be50417f59c2c2f167def9a775",
+    "id":  "qwen2.5-0.5b-instruct-q4_k_m.v1",
+    "model_revision":  "9217f5db79a29953eb74d5343926648285ec7e67"
+}

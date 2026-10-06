@@ -1,0 +1,63 @@
+{
+    "data_kind":  "synthetic",
+    "license":  "CC0-1.0",
+    "revision":  "1",
+    "schema_version":  "kzn.recognition.dataset.v1",
+    "provenance":  "Authored synthetic contract fixtures; no recognizer executed",
+    "items":  [
+                  {
+                      "id":  "asr.train.1",
+                      "session_ids":  [
+                                          "session-a"
+                                      ],
+                      "source":  "asr",
+                      "split":  "train",
+                      "speaker_ids":  [
+                                          "speaker-a"
+                                      ],
+                      "document_id":  "recording-a",
+                      "origin_id":  "original-a"
+                  },
+                  {
+                      "id":  "asr.calibration.1",
+                      "session_ids":  [
+                                          "session-b"
+                                      ],
+                      "source":  "asr",
+                      "split":  "calibration",
+                      "speaker_ids":  [
+                                          "speaker-b"
+                                      ],
+                      "document_id":  "recording-b",
+                      "origin_id":  "original-b"
+                  },
+                  {
+                      "id":  "ocr.test.1",
+                      "session_ids":  [
+
+                                      ],
+                      "source":  "ocr",
+                      "split":  "test",
+                      "speaker_ids":  [
+
+                                      ],
+                      "document_id":  "image-c",
+                      "origin_id":  "original-c"
+                  },
+                  {
+                      "id":  "ocr.development.1",
+                      "session_ids":  [
+
+                                      ],
+                      "source":  "ocr",
+                      "split":  "development",
+                      "speaker_ids":  [
+
+                                      ],
+                      "document_id":  "image-d",
+                      "origin_id":  "original-d"
+                  }
+              ],
+    "dataset_sha256":  "56bdabc9f8af0db41e8ace0807fab333d3b808f177bf0be1b7da403839fee7e5",
+    "dataset_id":  "authored-split-contract-v1"
+}
