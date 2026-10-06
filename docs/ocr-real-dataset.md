@@ -41,3 +41,39 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/prepare-ocr-real
 
 出力は`target/kzn-ocr-real/`。`preparation.json`に出典/split/status件数、補助的なsource_file重複、射影hash、quality_accepted=false、inference_executed=falseを記録する。合成用の固定候補・辞書・閾値は変更しない。
 登録時のdevelopment223件には空文字かつconfidence欠測2件、非空かつconfidence欠測0件。前回未評価だった非空欠測条件は今回のdevelopmentでも埋まっていない。外部原本との原文・数値confidence/null照合と、再実行による全射影hash一致を確認した。
+
+## 閾値を持たないsource記述とdevelopment観察（2026-10-06）
+
+`recognition_samples`に`--source-description description.json`を追加した。既存`--source-rule`とは排他で、description schemaは`kzn.ocr.ctc_description.v1`。認識器/版/decoder来歴・profile/domain・入力engine/scaleを照合するが、閾値・判定ruleは持たず、thresholdの追加はunknown fieldとして拒否する。旧source ruleの機能/出力は維持する。
+
+このdescriptionはCTC emitted-token平均のbox文字数加重という明示された方式に限定する。confidenceをSegment粒度、EngineScore、HigherIsBetter、range=[0,1]、calibration=Noneで保持し、raw値は変更しない。nullはMissing/None、0はObserved、範囲外・engine/scale/source不一致は拒否。候補はMissingのまま。confidenceの解釈と、認識正解確率やreview閾値の受入を分ける。
+
+提供元sources.lockのengine commitと、固定した生成runnerのコードを根拠に集約を記述する。実画像sources.lockにはモデルONNXのhashがないため、合成用モデルhashを転記せず、modelは提供元の名称宣言と記録する。過去の生成実行や実際のモデルbytesを独立に認証したものではない。runnerは縦方向のbox配置なら上から下、その他は左から右に並べ、文字数加重平均・総文字数0ならnullを出力する。実画像用decoder IDにこのrunner hashを保持する。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/observe-ocr-real.ps1 -DatasetRoot C:/Users/Shion/Documents/Projects/kzn-dataset -Offline
+```
+
+登録時のhash監査を再実行し、NDL・官公庁PDF・Commonsをそれぞれ`ja.ocr.real.<source_set>.ctc.v1` profile / `ja.ocr.real.<source_set>.v1` domainへ分ける。group分けに参照側のsource_setとIDだけを利用し、解析runnerへ渡すのはgoldなし7フィールド入力。各groupをsmall/core/fullで観察し、sourceのraw値・欠測・profile/domain、risk未推定、SLM0、low_riskなしを全reportで検証する。
+
+合成用統計asset・融合係数・confidence閾値は使わない。出力は従来のcore観察envelopeで、source-review wrapperではない。quality runnerへは確認待ち参照だけを渡すため、confirmed_count=0、precision/recallはnullである。`observation-summary.json`は処理件数とreview/undeterminedを記録し、正解率を出さない。
+
+### 比較規約の次の境界
+
+- 現profileのraw.v1は忠実な転記との比較を意図する。原画像に旧字体が書かれているなら、それを新字体へ自動修正した参照をrawの正解にはしない。
+- NDL既存参照との新字体化後の一致は、採用する場合でも別のversion付き参照一致診断とする。変換asset・空白/句読点規則・非可逆変換で消える差を明記し、忠実な転記の誤り検出と同じラベルにしない。
+- PDF/写真の画像との照合も含め、確認済みsubsetを作るときはreviewが出た例だけを選ばず、source/group単位の選定法を先に固定する。モデルによる再転記を人手確認と呼ばない。
+
+この段階の目的は実データで型契約と既存一次観察を動かすこと。自然な誤認識の識別力や、実画像への統計/fusionの汎化を受け入れたわけではない。
+### 観察結果
+
+| 出典 | 件数 | review | undetermined |
+| --- | ---: | ---: | ---: |
+| NDL | 65 | 2 | 63 |
+| 官公庁PDF | 25 | 2 | 23 |
+| Commons写真 | 133 | 0 | 133 |
+| 合計 | 223 | 4 | 219 |
+
+small/core/fullすべて同じ判断件数。review4件は既存の括弧対応ruleによるもので、行断片でも発生し得る。正解未確認のため成功検出/誤警報のどちらにも計上しない。confidenceの数値に基づく閾値判定は0、low_risk0・risk=null・SLM0を維持。669 reportは同じ223件を3辞書で観察したもので、サンプル数を669としない。
+
+検証: runner3テスト（descriptionの欠測/0/範囲/engine・scale・source照合/threshold拒否を追加）、全example all-features/offline check。全669reportのraw/欠測/profile/domain・risk/SLM/low_riskと品質分母を検査。qualityのconfirmed_count=0、precision/recall=null。既存source-ruleの合成development100件は旧reportとhash一致。calibration/testの特徴生成・推論、閾値調整・学習は未実施。

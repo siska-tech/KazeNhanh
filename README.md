@@ -123,3 +123,5 @@ OOF統計特徴で融合を再比較（2026-10-06）。small/core/fullとも不�
 2026-10-06: 固定OOF候補のscope/CPU監査を追加。非空入力の不一致検出20/26と空文字8/8を区別し、3辞書のrelease計測と受入前の未決条件を整理。[詳細](docs/recognition-fusion-scope-cpu.md)。
 
 2026-10-06: [実画像OCR1,025件のローカル登録](docs/ocr-real-dataset.md)を追加。development223件を分離し、字体規約・参照確認・資料単位の分割条件を監査。品質評価は未実施。
+
+2026-10-06: [実画像source記述・3辞書観察](docs/ocr-real-dataset.md)を追加。confidence意味付けと閾値を分離し、development223件はreview4/保留219。参照確認前のため検出精度は未算出。

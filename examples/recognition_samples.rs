@@ -1,6 +1,8 @@
 //! Model-free observation runner for user-provided OCR. Gold/reference fields are never read.
 use kaze_nhanh::source_adapters::*;
 use kaze_nhanh::*;
+#[path = "recognition_samples/description.rs"]
+mod description;
 fn confidence(sample: &serde_json::Value) -> Result<Option<f64>, &'static str> {
     match sample.get("confidence") {
         Some(serde_json::Value::Null) => Ok(None),
@@ -51,6 +53,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
+    let source_description: Option<description::Description> =
+        if args.len() >= 2 && args[args.len() - 2] == "--source-description" {
+            let path = args.pop().expect("description path");
+            args.pop();
+            if std::fs::metadata(&path)?.len() > 65536 {
+                return Err("description exceeds 64 KiB".into());
+            }
+            let d: description::Description = serde_json::from_slice(&std::fs::read(path)?)?;
+            d.validate()?;
+            Some(d)
+        } else {
+            None
+        };
     let source_mapping: Option<SourceMapping> =
         if args.len() >= 2 && args[args.len() - 2] == "--source-rule" {
             let path = args.pop().expect("source rule path");
@@ -67,8 +82,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             None
         };
+    if source_description.is_some() && source_mapping.is_some() {
+        return Err("source description and rule are mutually exclusive".into());
+    }
     if args.len() != 2 && args.len() != 5 {
-        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--source-rule mapping.json] [--dictionary path] [--sparse-review] [--timings timing.json]".into());
+        return Err("Usage: recognition_samples ocr.jsonl output.json [statistics.json expected-sha256 domain] [--source-rule mapping.json | --source-description description.json] [--dictionary path] [--sparse-review] [--timings timing.json]".into());
     }
     if timing_path
         .as_ref()
@@ -187,14 +205,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             evidence.validate(text, RecognitionSource::Ocr)?;
         }
+        if let Some(d) = &source_description {
+            if statistics_domain.is_some_and(|domain| domain != d.domain) {
+                return Err("source/statistics domain mismatch".into());
+            }
+            evidence = d.apply(&sample, text, raw)?;
+        }
         let annotations = [SourceAnnotation {
             span: ByteSpan::whole(text),
             data: serde_json::json!({"ocr_engine":engine_id,"ocr_confidence":raw,"document_id":document,
                 "confidence_scale":sample["confidence_scale"],"image_position":sample["image_position"],"image_column_from_right":sample["image_column_from_right"]}),
         }];
         let mut input = RecognitionInput::new(text, RecognitionSource::Ocr, document, id);
-        input.domain =
-            statistics_domain.or_else(|| source_mapping.as_ref().map(|m| m.rule.domain.as_str()));
+        input.domain = statistics_domain
+            .or_else(|| source_mapping.as_ref().map(|m| m.rule.domain.as_str()))
+            .or_else(|| source_description.as_ref().map(|d| d.domain.as_str()));
         input.annotations = &annotations;
         input.recognizer_evidence = Some(&evidence);
         let call_start = std::time::Instant::now();
@@ -227,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "review_count":reports.iter().filter(|r| r.decision == RecognitionDecision::Review).count(),
         "low_risk_count":0,"slm_calls":0,"gold_used_for_inference":false,
         "statistics_enabled":statistics_domain.is_some(),"sparse_review_enabled":sparse_review,
-        "score_semantics":if source_mapping.is_some() {"uncalibrated_explicit_source_mapping"} else {"uncalibrated_engine_score_direction_and_aggregation_unknown"}});
+        "score_semantics":if source_mapping.is_some() || source_description.is_some() {"uncalibrated_explicit_source_mapping"} else {"uncalibrated_engine_score_direction_and_aggregation_unknown"}});
     let output = if source_mapping.is_some() {
         serde_json::json!({"schema_version":"kzn.recognition.source_review_observation.v1","reports":source_reports})
     } else {

@@ -413,3 +413,12 @@ runner契約2件、全example all-features/offline check、3辞書比較、全60
 - [ ] 参照/comparison policy確認、source/domain binding、development観察、独立受入
 
 [登録手順](../docs/ocr-real-dataset.md)。Status=progress。推論・再学習なし。223件の原文/confidence/null/status保持とgold除外を照合、再実行の射影hash一致を確認。
+
+## 実画像source記述・development観察（2026-10-06）
+
+- [x] 閾値なしのCTC source description、厳格binding、欠測/raw保持
+- [x] source別profile/domainと3辞書の223件観察、全669report契約照合
+- [x] runner3テスト・全example check・旧source-rule出力hash一致
+- [ ] 参照/comparison policyの確定、確認済みsubset、実画像統計/fusion・独立受入
+
+[結果](../docs/ocr-real-dataset.md)。Status=progress。review4/保留219は全3辞書共通。precision/recallはnull、risk=null・SLM0。calibration/test未推論、閾値調整/学習なし。

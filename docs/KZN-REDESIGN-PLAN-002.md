@@ -289,3 +289,7 @@ train500をdocument/origin/非空転記の連結groupで5分割し、各例を�
 ## 31. ユーザー提供実画像OCRの登録（2026-10-06）
 
 実画像1,025件を別datasetとして7ファイルhash固定。宣言split監査を実施し、development223件だけをgold除外入力と原宣言/確認待ち参照へ分離。NDL新字体参照、PDFテキストレイヤー、未確認の写真転記を確定転記誤りと混同しない。同一PDFが複数splitに存在するため未知資料への独立受入とは区別。推論/再学習なし、calibration/testはmetadata監査のみ。[登録と利用条件](ocr-real-dataset.md)。
+
+## 32. 実画像source記述と一次観察（2026-10-06）
+
+閾値のないCTC source descriptionをexampleへ追加し、旧source ruleと分離。NDL/PDF/写真を別domain/profileにしてdevelopment223件を3辞書で観察、いずれもreview4/undetermined219。reviewは括弧rule由来で誤認識検出の成否は未確認。全参照を品質分母から除外し、risk=null/SLM0を維持。モデルhash未提供の来歴制約も記録。[仕様・結果](ocr-real-dataset.md)。比較規約/参照確認と実画像統計・fusionは引き続き未受入。

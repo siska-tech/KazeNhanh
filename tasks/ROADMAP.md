@@ -85,3 +85,5 @@ R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値�
 2026-10-06: [固定候補のscope/CPU監査](../docs/recognition-fusion-scope-cpu.md)を追加。欠測と空入力を分離し、3辞書release計測・report一致を検証。運用数値要件・最終融合CPU・未評価区分・独立受入は継続。
 
 2026-10-06: [実画像OCRデータ登録](../docs/ocr-real-dataset.md)。hash/split監査とdevelopment223件の入力分離を完了。参照規約・source適用・独立評価は継続。
+
+2026-10-06: 実画像用の閾値なしsource記述と3辞書観察を追加。review4/保留219、参照は品質分母へ算入せず。比較規約/確認済み参照/実画像fusionを継続。[詳細](../docs/ocr-real-dataset.md)。
