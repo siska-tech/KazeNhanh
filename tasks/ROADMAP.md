@@ -83,3 +83,5 @@ R2 source confidence契約（2026-10-05）: adapter側の厳格binding・閾値�
 2026-10-06: group単位のOOF統計特徴を実装。3辞書の統合flagは不一致28/34・一致2/66へ。R2は独立受入/校正/CPU条件を継続し、本番policyは変更しない。[詳細](../docs/recognition-fusion-baseline.md)。
 
 2026-10-06: [固定候補のscope/CPU監査](../docs/recognition-fusion-scope-cpu.md)を追加。欠測と空入力を分離し、3辞書release計測・report一致を検証。運用数値要件・最終融合CPU・未評価区分・独立受入は継続。
+
+2026-10-06: [実画像OCRデータ登録](../docs/ocr-real-dataset.md)。hash/split監査とdevelopment223件の入力分離を完了。参照規約・source適用・独立評価は継続。

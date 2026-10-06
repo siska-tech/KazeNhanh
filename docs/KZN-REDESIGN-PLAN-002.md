@@ -285,3 +285,7 @@ train500をdocument/origin/非空転記の連結groupで5分割し、各例を�
 ## 30. 固定候補の適用範囲・CPU観察（2026-10-06）
 
 再学習なしの候補hash固定・予測再現監査を追加。3辞書とも非空入力はflag不一致20/26・一致2/66、空文字かつconfidence欠測は8/8。非空かつconfidence欠測は実例0で未評価。releaseの100件逐次処理を各3回測定し、常駐call p95は約0.27〜0.30ms（logistic計算と入出力を除く）。詳細な対象範囲と独立受入ゲートを[別文書](recognition-fusion-scope-cpu.md)に記録。SLO・品質数値要件・校正/test受入は未完了。R2はprogress。
+
+## 31. ユーザー提供実画像OCRの登録（2026-10-06）
+
+実画像1,025件を別datasetとして7ファイルhash固定。宣言split監査を実施し、development223件だけをgold除外入力と原宣言/確認待ち参照へ分離。NDL新字体参照、PDFテキストレイヤー、未確認の写真転記を確定転記誤りと混同しない。同一PDFが複数splitに存在するため未知資料への独立受入とは区別。推論/再学習なし、calibration/testはmetadata監査のみ。[登録と利用条件](ocr-real-dataset.md)。

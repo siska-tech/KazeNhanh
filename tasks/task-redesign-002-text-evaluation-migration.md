@@ -405,3 +405,11 @@ runner契約2件、全example all-features/offline check、3辞書比較、全60
 - [ ] 最終融合処理のCPU測定、運用上の数値要件、未評価区分のデータ充足、校正/test受入
 
 [結果と範囲](../docs/recognition-fusion-scope-cpu.md)。Status=progress。fusion9テスト・runner2テスト・全example all-features/offline check成功。非空の不一致は20/26、空文字の8/8を別集計。runtime policy変更、再学習、calibration/test評価なし。
+## 実画像OCRデータ登録（2026-10-06）
+
+- [x] 提供1,025件のhash固定とmetadata split監査
+- [x] development223件の7フィールド入力/元宣言/確認待ち参照の分離
+- [x] source_fileのsplit横断と参照規約の未確定事項を文書化
+- [ ] 参照/comparison policy確認、source/domain binding、development観察、独立受入
+
+[登録手順](../docs/ocr-real-dataset.md)。Status=progress。推論・再学習なし。223件の原文/confidence/null/status保持とgold除外を照合、再実行の射影hash一致を確認。
